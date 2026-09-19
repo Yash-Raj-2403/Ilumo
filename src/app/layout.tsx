@@ -25,7 +25,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           Skip to main content
         </a>
-        {children}
+        <div id="app-root" className="contents">
+          {children}
+        </div>
+        <noscript>
+          <style>{`#ilumo-intro{display:none!important}`}</style>
+        </noscript>
       </body>
     </html>
   );
