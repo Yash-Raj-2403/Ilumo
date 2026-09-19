@@ -9,6 +9,23 @@ import { useStudent } from "./student-provider";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
 
+/** Ask the server for Gemini's feedback on finished answers; falls back to a local summary offline. */
+export async function requestFeedback(lesson: Lesson, answers: (string | null)[], profile: unknown): Promise<QuizFeedback> {
+  try {
+    const res = await authedFetch(`/api/lessons/${lesson.id}/quiz-feedback`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lesson, answers, profile }),
+      signal: AbortSignal.timeout(60_000),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.feedback) throw new Error();
+    return data.feedback;
+  } catch {
+    return mockFeedback(lesson, answers); // never block the student on the network
+  }
+}
+
 export function Quiz({
   lesson,
   onDone,
@@ -45,20 +62,7 @@ export function Quiz({
     }
     setAnswers(all);
     setFinishing(true);
-    let feedback: QuizFeedback;
-    try {
-      const res = await authedFetch(`/api/lessons/${lesson.id}/quiz-feedback`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lesson, answers: all, profile: student }),
-        signal: AbortSignal.timeout(60_000),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.feedback) throw new Error();
-      feedback = data.feedback;
-    } catch {
-      feedback = mockFeedback(lesson, all); // never block the student on the network
-    }
+    const feedback = await requestFeedback(lesson, all, student);
     onDone(all, feedback);
   }
 

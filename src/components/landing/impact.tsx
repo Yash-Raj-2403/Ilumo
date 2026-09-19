@@ -28,6 +28,7 @@ export function Impact() {
             <Heart className="ml-2 inline size-5 fill-rose-500 text-rose-500" aria-hidden />
           </h2>
           <p className="mt-3 text-base text-body">Different abilities. Brighter futures.</p>
+          <Link href="/impact" className="mt-3 inline-flex min-h-11 items-center font-semibold text-brand underline underline-offset-4">See our impact in numbers</Link>
         </div>
         <ul className="flex flex-wrap justify-center gap-3">
           {categories.map((c) => {

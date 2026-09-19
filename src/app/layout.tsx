@@ -1,9 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Outfit, Caveat } from "next/font/google";
+import { Outfit, Caveat, Lexend, Atkinson_Hyperlegible } from "next/font/google";
 import "./globals.css";
 
 const outfit = Outfit({ variable: "--font-outfit", subsets: ["latin"] });
 const caveat = Caveat({ variable: "--font-caveat", subsets: ["latin"] });
+// Easy-to-read fonts for the reading tools.
+const lexend = Lexend({ variable: "--font-lexend", subsets: ["latin"] });
+const atkinson = Atkinson_Hyperlegible({ variable: "--font-atkinson", subsets: ["latin"], weight: ["400", "700"] });
 
 export const metadata: Metadata = {
   title: "ILUMO — See the Ability",
@@ -17,7 +20,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${outfit.variable} ${caveat.variable} antialiased`}>
+    <html lang="en" className={`${outfit.variable} ${caveat.variable} ${lexend.variable} ${atkinson.variable} antialiased`}>
       <body className="flex min-h-screen flex-col overflow-x-hidden">
         <a
           href="#main"

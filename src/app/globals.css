@@ -110,3 +110,9 @@ body {
   .print-large h2 { font-size: 28pt; margin: 1em 0 0.3em; }
   .print-large p { margin: 0 0 0.8em; }
 }
+
+/* Motor support: the item a switch will select next, and the dwell-click progress bar. */
+[data-scanning="true"] { outline: 7px solid #d9480f !important; outline-offset: 5px !important; box-shadow: 0 0 0 12px rgb(217 72 15 / 0.2) !important; }
+.dwelling { position: relative; overflow: hidden; }
+.dwelling::after { content: ""; position: absolute; left: 0; bottom: 0; height: 10px; background: #d9480f; animation: dwell var(--dwell-ms, 1500ms) linear forwards; }
+@keyframes dwell { from { width: 0; } to { width: 100%; } }

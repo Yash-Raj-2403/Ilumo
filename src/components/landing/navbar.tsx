@@ -11,15 +11,17 @@ import { CATEGORIES, categoryHref } from "@/lib/categories";
 import { HoveredLink, Menu, MenuItem, ProductItem } from "@/components/ui/navbar-menu";
 import { Logo } from "./logo";
 
-const sections = ["home", "about", "features", "impact", "contact"] as const;
+// Only these two live on the landing page and are tracked while scrolling; the rest are pages.
+const sections = ["home", "features", "awareness"] as const;
 
 const links = [
   { label: "Home", href: "/", id: "home" },
-  { label: "About", href: "/#about", id: "about" },
+  { label: "About", href: "/about", id: "about" },
   { label: "Features", href: "/#features", id: "features" },
-  { label: "Our Impact", href: "/#impact", id: "impact" },
+  { label: "Our Impact", href: "/impact", id: "impact" },
+  { label: "Awareness", href: "/blog", id: "blog" },
   { label: "For Parents", href: "/signup?role=parent", id: "parents" },
-  { label: "Contact", href: "/#contact", id: "contact" },
+  { label: "Contact", href: "/contact", id: "contact" },
 ];
 
 const ICON_BY_SLUG = {
@@ -44,13 +46,23 @@ export function Navbar() {
   const [landingCurrent, setCurrent] = useState<string>("home");
   const pathname = usePathname();
   // On the landing page the highlight follows scrolling; inside the student area no section is "current".
-  const current = pathname === "/" ? landingCurrent : pathname.startsWith("/student/support") ? "features" : null;
+  const inApp = pathname.startsWith("/student") || pathname.startsWith("/parent");
+  const current =
+    pathname === "/" ? (landingCurrent === "awareness" ? "blog" : landingCurrent)
+    : pathname.startsWith("/about") ? "about"
+    : pathname.startsWith("/impact") ? "impact"
+    : pathname.startsWith("/blog") ? "blog"
+    : pathname.startsWith("/contact") ? "contact"
+    : pathname.startsWith("/student/support") ? "features"
+    : null;
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const router = useRouter();
   const { signedIn, signOut } = useAuthSession();
   const { role, supports: mine } = useMyProfile();
   const dashboardHref = role === "parent" ? "/parent" : "/student";
+  // Inside the app, "Features" goes to the learner's own support list, not back to the landing page.
+  const navLinks = links.map((l) => (l.id === "features" && inApp ? { ...l, href: role === "parent" ? "/parent" : "/student#support" } : l));
   const supports = mine === undefined ? [] : mine ? allSupports.filter((s) => mine.includes(s.slug)) : allSupports;
   const logOut = async () => {
     setOpen(false);
@@ -97,7 +109,7 @@ export function Navbar() {
 
         <div className="hidden lg:block">
           <Menu setActive={setActive} label="Main">
-            {links.map((l) => {
+            {navLinks.map((l) => {
               const isCurrent = current === l.id;
               if (l.id === "features")
                 return (
@@ -131,13 +143,13 @@ export function Navbar() {
               <button
                 type="button"
                 onClick={logOut}
-                className="hidden items-center gap-2 rounded-full px-4 py-3 text-[15px] font-semibold text-brand-deep transition hover:bg-brand-soft sm:inline-flex"
+                className="hidden items-center gap-2 whitespace-nowrap rounded-full px-3 py-3 text-[15px] font-semibold text-brand-deep transition hover:bg-brand-soft sm:inline-flex xl:px-4"
               >
                 <LogOut className="size-4" aria-hidden /> Sign out
               </button>
               <Link
                 href={dashboardHref}
-                className="hidden items-center gap-2 rounded-full bg-brand px-6 py-3 text-[15px] font-semibold text-white shadow-[0_10px_25px_rgba(91,77,245,0.35)] transition hover:bg-[#4a3de0] motion-safe:hover:-translate-y-0.5 sm:inline-flex"
+                className="hidden items-center gap-2 whitespace-nowrap rounded-full bg-brand px-5 py-3 text-[15px] font-semibold xl:px-6 text-white shadow-[0_10px_25px_rgba(91,77,245,0.35)] transition hover:bg-[#4a3de0] motion-safe:hover:-translate-y-0.5 sm:inline-flex"
               >
                 <LayoutDashboard className="size-4" aria-hidden /> Dashboard
               </Link>
@@ -152,7 +164,7 @@ export function Navbar() {
               </Link>
               <Link
                 href="/signup"
-                className="hidden items-center gap-2 rounded-full bg-brand px-6 py-3 text-[15px] font-semibold text-white shadow-[0_10px_25px_rgba(91,77,245,0.35)] transition hover:bg-[#4a3de0] motion-safe:hover:-translate-y-0.5 sm:inline-flex"
+                className="hidden items-center gap-2 whitespace-nowrap rounded-full bg-brand px-5 py-3 text-[15px] font-semibold xl:px-6 text-white shadow-[0_10px_25px_rgba(91,77,245,0.35)] transition hover:bg-[#4a3de0] motion-safe:hover:-translate-y-0.5 sm:inline-flex"
               >
                 Get Started <ArrowRight className="size-4" aria-hidden />
               </Link>
@@ -182,7 +194,7 @@ export function Navbar() {
             className="mx-4 mb-3 rounded-3xl border border-white bg-white/95 p-3 shadow-[0_20px_50px_rgba(91,77,245,0.18)] backdrop-blur-lg lg:hidden"
           >
             <ul className="flex flex-col">
-              {links.map((l) => (
+              {navLinks.map((l) => (
                 <li key={l.id}>
                   <Link
                     href={l.href}

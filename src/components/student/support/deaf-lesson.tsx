@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { BookOpen, ExternalLink, Send } from "lucide-react";
 import sampleLesson from "@/data/mockPhotosynthesisLesson.json";
 import type { LessonContent } from "@/lib/lesson-types";
+import { lessonsFor } from "@/lib/categories";
 import { authedFetch } from "@/lib/supabase/authed-fetch";
 import { findBestBlock } from "@/lib/voice/commands";
 import { useStudent } from "../student-provider";
@@ -19,7 +20,8 @@ const btn = "inline-flex min-h-12 items-center gap-2 rounded-full px-6 font-semi
 type Pick = { key: string; title: string; content: LessonContent };
 
 export function DeafLesson() {
-  const { lessons } = useStudent();
+  const { lessons: all } = useStudent();
+  const lessons = lessonsFor(all, "deaf-hoh");
   const [pick, setPick] = useState<Pick | null>(null);
 
   if (!pick) {

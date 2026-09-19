@@ -21,7 +21,7 @@ export function Features() {
   return (
     <section aria-labelledby="features-heading" className="relative bg-white/60 py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div id="about" className="mx-auto max-w-2xl scroll-mt-28 text-center">
+        <div className="mx-auto max-w-2xl text-center">
           <p className="inline-block rounded-full bg-brand-soft px-4 py-1.5 text-xs font-semibold tracking-wider text-brand">
             OUR FEATURES
           </p>

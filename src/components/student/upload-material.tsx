@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FileText, Image as ImageIcon, UploadCloud } from "lucide-react";
 import type { Lesson } from "@/lib/lesson-types";
+import { CATEGORIES, type CategorySlug } from "@/lib/categories";
 import { authedFetch } from "@/lib/supabase/authed-fetch";
 import { useStudent } from "./student-provider";
 import { ProcessingState } from "./processing-state";
@@ -29,7 +30,10 @@ function validate(file: File): string | null {
 export function UploadMaterial() {
   const router = useRouter();
   const params = useSearchParams();
-  const { student, saveLesson } = useStudent();
+  const { student, saveLesson, supports: mySupports } = useStudent();
+  // Which of the person's own kinds of support this lesson should be adapted for.
+  const [adaptFor, setAdaptFor] = useState<CategorySlug[] | null>(null);
+  const chosen = (adaptFor ?? mySupports).filter((s) => mySupports.includes(s));
   const [phase, setPhase] = useState<Phase>("pick");
   const [file, setFile] = useState<File | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
@@ -52,6 +56,7 @@ export function UploadMaterial() {
       setPhase("processing");
       const form = new FormData();
       form.set("profile", JSON.stringify(student));
+      form.set("supports", JSON.stringify(chosen.length ? chosen : mySupports));
       if (source.kind === "sample") form.set("sample", "true");
       else form.set("file", source.file);
 
@@ -84,7 +89,7 @@ export function UploadMaterial() {
         clearTimeout(timer);
       }
     },
-    [router, saveLesson, student],
+    [router, saveLesson, student, chosen, mySupports],
   );
 
   // ?sample=1 jumps straight into the sample lesson.
@@ -133,6 +138,34 @@ export function UploadMaterial() {
         <h1 className="text-4xl font-bold tracking-tight text-ink">Let&apos;s make your learning material accessible.</h1>
         <p className="mt-3 text-xl text-body">Upload something you&apos;re learning and ILUMO will adapt it for you.</p>
       </header>
+
+      <fieldset className="rounded-3xl bg-tint-purple p-5 card-border">
+        <legend className="px-2 text-lg font-bold text-ink">Adapt this lesson for</legend>
+        {mySupports.length === 1 ? (
+          <p className="text-lg text-ink">{CATEGORIES.find((c) => c.slug === mySupports[0])?.title}</p>
+        ) : (
+          <div className="flex flex-wrap gap-3">
+            {CATEGORIES.filter((c) => mySupports.includes(c.slug)).map((c) => {
+              const on = chosen.includes(c.slug);
+              return (
+                <label key={c.slug} className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full px-4 font-semibold has-[:focus-visible]:outline has-[:focus-visible]:outline-[3px] has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand ${on ? "bg-brand-deep text-white" : "bg-white text-brand-deep card-border"}`}>
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={on}
+                    onChange={() => {
+                      const next = on ? chosen.filter((x) => x !== c.slug) : [...chosen, c.slug];
+                      setAdaptFor(next.length ? next : chosen); // keep at least one
+                    }}
+                  />
+                  {on && <span aria-hidden>✓</span>} {c.short}
+                </label>
+              );
+            })}
+          </div>
+        )}
+        <p className="mt-2 text-sm text-body">It will appear in those support areas, written to suit them.</p>
+      </fieldset>
 
       {!file ? (
         <div

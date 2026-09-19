@@ -40,7 +40,7 @@ export const MenuItem = ({
         aria-haspopup={children ? "true" : undefined}
         aria-expanded={children ? active === item : undefined}
         className={cn(
-          "block rounded-full px-4 py-2 text-[15px] font-medium transition-colors",
+          "block whitespace-nowrap rounded-full px-2.5 py-2 text-[14px] font-medium transition-colors xl:px-4 xl:text-[15px]",
           current
             ? "bg-brand-soft text-brand"
             : "text-ink hover:bg-brand-soft/60 hover:text-brand",

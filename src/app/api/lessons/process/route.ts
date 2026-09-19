@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { adaptMaterial, geminiConfigured, isQuotaError, type Material } from "@/lib/server/gemini";
 import { MOCK_LESSON } from "@/lib/server/mock";
 import { requireUser } from "@/lib/server/auth";
+import { normalizeSupports } from "@/lib/auth-shared";
 import { DEMO_STUDENT, type Lesson, type StudentProfile } from "@/lib/lesson-types";
 
 export const maxDuration = 60;
@@ -42,6 +43,14 @@ export async function POST(request: Request) {
     /* fall back to the demo profile */
   }
 
+  let supports = normalizeSupports([]);
+  try {
+    const raw = form.get("supports");
+    if (typeof raw === "string") supports = normalizeSupports(JSON.parse(raw));
+  } catch {
+    /* no tag: treated as "all" */
+  }
+
   const isSample = form.get("sample") === "true";
   const pasted = form.get("text");
   const file = form.get("file");
@@ -50,7 +59,7 @@ export async function POST(request: Request) {
   let visual: Lesson["visual"];
 
   if (isSample) {
-    if (shouldMock()) return finish({ ...MOCK_LESSON, source: "mock", visual: { kind: "sample" } } as Lesson);
+    if (shouldMock()) return finish({ ...MOCK_LESSON, supports, source: "mock", visual: { kind: "sample" } } as Lesson);
     material = { kind: "text", text: SAMPLE_TEXT };
     visual = { kind: "sample" };
   } else if (file instanceof File) {
@@ -78,15 +87,15 @@ export async function POST(request: Request) {
 
   if (shouldMock()) {
     // Demo mode: no key configured, so show the bundled lesson instead of failing.
-    return finish({ ...MOCK_LESSON, source: "mock", visual } as Lesson);
+    return finish({ ...MOCK_LESSON, supports, source: "mock", visual } as Lesson);
   }
 
   try {
-    const content = await adaptMaterial(material, profile);
-    return finish({ ...content, source: "gemini", visual } as Lesson);
+    const content = await adaptMaterial(material, profile, supports);
+    return finish({ ...content, supports, source: "gemini", visual } as Lesson);
   } catch (err) {
     console.error("[ilumo] lesson processing failed:", err instanceof Error ? err.message : err);
-    if (isSample) return finish({ ...MOCK_LESSON, source: "mock", visual: { kind: "sample" } } as Lesson);
+    if (isSample) return finish({ ...MOCK_LESSON, supports, source: "mock", visual: { kind: "sample" } } as Lesson);
     if (isQuotaError(err)) return fail("The AI service is busy right now. Please wait a minute and try again.", 429, "rate_limited");
     return fail("We couldn't prepare your lesson right now.", 502, "ai_unavailable");
   }

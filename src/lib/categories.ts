@@ -51,9 +51,9 @@ export const CATEGORIES: Category[] = [
     slug: "speech",
     title: "Speech & Non-speaking",
     short: "Speech",
-    summary: "Speech-to-text, picture communication and tap-to-answer questions.",
+    summary: "A picture communication board that speaks for you, typing that talks, speech to text and tap-to-answer questions.",
     features: ["STT where speech is possible", "TTS", "AAC/picture communication", "Tap-to-answer questions", "Symbol-based communication"],
-    ready: false,
+    ready: true,
     card: "bg-tint-green",
     badge: "bg-emerald-100 text-emerald-600",
   },
@@ -61,9 +61,9 @@ export const CATEGORIES: Category[] = [
     slug: "motor",
     title: "Physical & Motor",
     short: "Motor",
-    summary: "Large buttons, no precise dragging and extended response time.",
+    summary: "Huge buttons, switch scanning, hover-to-click, voice control and answers that never time out.",
     features: ["Large buttons", "Minimal precise dragging", "Keyboard/switch accessibility", "Voice control", "Extended response time"],
-    ready: false,
+    ready: true,
     card: "bg-tint-purple",
     badge: "bg-violet-100 text-violet-600",
   },
@@ -71,9 +71,9 @@ export const CATEGORIES: Category[] = [
     slug: "learning",
     title: "Learning Disabilities",
     short: "Learning",
-    summary: "Dyslexia-friendly reading, phonics, simplified text and extra practice.",
+    summary: "Easy-to-read text with word-by-word read-aloud, simpler words, sounding words out and practice that repeats.",
     features: ["Dyslexia-friendly reading", "Text-to-speech", "Phonics-based learning", "Simplified text", "Extra practice/repetition", "Visual learning"],
-    ready: false,
+    ready: true,
     card: "bg-tint-blue",
     badge: "bg-sky-100 text-sky-600",
   },
@@ -81,3 +81,7 @@ export const CATEGORIES: Category[] = [
 
 export const categoryHref = (c: Category) => `/student/support/${c.slug}`;
 export const findCategory = (slug: string) => CATEGORIES.find((c) => c.slug === slug);
+
+/** Lessons that were adapted for a given kind of support (lessons with no tag count for all). */
+export const lessonsFor = <T extends { supports?: CategorySlug[] }>(lessons: T[], slug: CategorySlug): T[] =>
+  lessons.filter((l) => !l.supports || l.supports.length === 0 || l.supports.includes(slug));

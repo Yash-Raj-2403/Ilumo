@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import type { LessonContent, QuizFeedback, StudentProfile } from "@/lib/lesson-types";
+import { CATEGORIES, type CategorySlug } from "@/lib/categories";
 import { validateFeedback, validateLesson } from "./validate";
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
@@ -98,12 +99,26 @@ async function generateJsonOnce(parts: object[], schema: object, system: string,
   }
 }
 
-function profileBrief(p: StudentProfile) {
+// What "adapted for" means for each kind of support. Only the ones the person chose are sent.
+const SUPPORT_GUIDANCE: Record<CategorySlug, string> = {
+  autism: "Autism/neurodivergence: literal, predictable wording, no idioms or sarcasm, short numbered steps, one idea per section, a calm consistent structure.",
+  "blind-low-vision": "Blind/low vision: describe every picture, chart and diagram fully in words, say what labels and arrows show, never rely on colour or position alone.",
+  "deaf-hoh": "Deaf/hard of hearing: plain, short written sentences, avoid references to sounds or listening, explain idioms, put instructions in clear steps.",
+  speech: "Speech/non-speaking: quiz questions must be answerable by tapping one short option, keep options brief, avoid questions that need a spoken explanation.",
+  motor: "Physical/motor: fewer, larger steps, keep sections short so there is less to scroll and click, avoid anything that needs dragging.",
+  learning: "Learning disability (e.g. dyslexia): simple common words, very short sentences, define hard words when first used, choose key terms that are easy to sound out.",
+};
+
+function profileBrief(p: StudentProfile, supports: CategorySlug[] = []) {
+  const chosen = supports.length ? supports : CATEGORIES.map((c) => c.slug);
+  const guidance = chosen.map((s) => `- ${SUPPORT_GUIDANCE[s]}`).join("\n");
   return `STUDENT PROFILE
 Age: ${p.age}
 Visual accessibility support: ${p.accessibilityProfile.visualSupport ? "yes" : "no"}
 Needs image and diagram descriptions: ${p.accessibilityProfile.imageDescriptions ? "yes" : "no"}
 Prefers ${p.learningPreferences.contentStyle} language and ${p.learningPreferences.chunkedContent ? "small chunks" : "longer passages"}.
+SUPPORT THIS LESSON IS BEING ADAPTED FOR:
+${guidance}
 Use the student's needs to shape the lesson, but do not mention the student's profile or any disability in the lesson text.`;
 }
 
@@ -111,10 +126,10 @@ export type Material =
   | { kind: "text"; text: string }
   | { kind: "file"; mimeType: string; base64: string };
 
-export async function adaptMaterial(material: Material, profile: StudentProfile): Promise<LessonContent> {
+export async function adaptMaterial(material: Material, profile: StudentProfile, supports: CategorySlug[] = []): Promise<LessonContent> {
   const parts: object[] = [
     {
-      text: `${profileBrief(profile)}\n\nLEARNING MATERIAL follows. Read all text and study every image or diagram. Write a description for each important visual.`,
+      text: `${profileBrief(profile, supports)}\n\nLEARNING MATERIAL follows. Read all text and study every image or diagram. Write a description for each important visual.`,
     },
   ];
   if (material.kind === "text") parts.push({ text: material.text });
@@ -240,4 +255,24 @@ export async function captionMedia(mimeType: string, base64: string) {
     summary: (raw.summary ?? "").trim().slice(0, 1200),
     keyPoints: (raw.keyPoints ?? []).map((k) => String(k).trim()).filter(Boolean).slice(0, 6),
   };
+}
+
+// ---- Describe a picture -----------------------------------------------------------------------
+const DESCRIBE_INSTRUCTION = `You describe a picture for a learner who cannot see it well or finds pictures hard to interpret.
+
+- Say what it is and what it shows, in plain words and short sentences (three to five sentences).
+- Read out any labels, numbers or arrows and say what they point to.
+- Explain how the parts relate to each other if it is a diagram or chart.
+- Describe only what you can actually see. Never guess at things that are not clear.
+Return ONLY JSON: {"title": "a few words", "description": "..."}.`;
+
+export async function describePicture(mimeType: string, base64: string): Promise<{ title: string; description: string }> {
+  const raw = (await generateJson(
+    [{ text: "Describe this picture." }, { inlineData: { mimeType, data: base64 } }],
+    obj({ title: S, description: S }),
+    DESCRIBE_INSTRUCTION,
+  )) as { title?: string; description?: string };
+  const description = (raw.description ?? "").trim();
+  if (!description) throw new Error("no description");
+  return { title: (raw.title ?? "Picture").trim().slice(0, 120), description: description.slice(0, 1500) };
 }

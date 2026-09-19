@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, BookOpen, Check, PenLine, RotateCcw, Star, Volume2 } from "lucide-react";
+import { ArrowLeft, BookOpen, Check, Image as ImageIcon, PenLine, RotateCcw, Square, Star, Volume2 } from "lucide-react";
 import sampleLesson from "@/data/mockPhotosynthesisLesson.json";
-import type { Lesson, LessonContent } from "@/lib/lesson-types";
+import type { Lesson } from "@/lib/lesson-types";
+import { lessonsFor } from "@/lib/categories";
+import { LessonVisual } from "../lesson-visual";
 import { useStudent } from "../student-provider";
 
 // Autism / neurodivergence support. The same lesson is always laid out the same way:
@@ -12,12 +14,17 @@ import { useStudent } from "../student-provider";
 
 type Task =
   | { kind: "read"; label: string; title: string; lines: string[] }
+  | { kind: "look"; label: string }
   | { kind: "practice"; label: string; question: string; options: string[]; answer: string; explanation: string }
   | { kind: "done"; label: string };
 
 const sentences = (text: string) => text.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
 
-function buildTasks(lesson: LessonContent): Task[] {
+const LETTERS = ["A", "B", "C", "D", "E", "F"];
+
+const SAMPLE: Lesson = { ...(sampleLesson as unknown as Lesson), id: "sample", createdAt: "", source: "mock", visual: { kind: "sample" } };
+
+function buildTasks(lesson: Lesson): Task[] {
   const reads: Task[] = lesson.sections.map((s, i) => ({
     kind: "read",
     label: `Read ${i + 1}`,
@@ -32,28 +39,29 @@ function buildTasks(lesson: LessonContent): Task[] {
     answer: q.correctAnswer,
     explanation: q.explanation,
   }));
-  return [...reads, ...practice, { kind: "done", label: "All done" }];
+  const look: Task[] = lesson.visual || lesson.visualDescriptions.length > 0 ? [{ kind: "look", label: "Look" }] : [];
+  return [...reads, ...look, ...practice, { kind: "done", label: "All done" }];
 }
 
 function TaskIcon({ task, className }: { task: Task; className?: string }) {
   if (task.kind === "read") return <BookOpen className={className} aria-hidden />;
+  if (task.kind === "look") return <ImageIcon className={className} aria-hidden />;
   if (task.kind === "practice") return <PenLine className={className} aria-hidden />;
   return <Star className={className} aria-hidden />;
 }
 
 export function AutismSupport() {
   const { lessons, speakOne, stopQueue } = useStudent();
-  const [source, setSource] = useState<{ title: string; content: LessonContent } | null>(null);
+  const [source, setSource] = useState<Lesson | null>(null);
 
   if (!source) {
-    return <Picker lessons={lessons} onPick={(title, content) => setSource({ title, content })} />;
+    return <Picker lessons={lessonsFor(lessons, "autism")} onPick={setSource} />;
   }
   return (
     <div className="calm-theme -m-4 rounded-3xl bg-canvas p-4 sm:-m-6 sm:p-6">
       <Session
-        key={source.title}
-        title={source.title}
-        content={source.content}
+        key={source.id}
+        lesson={source}
         speak={speakOne}
         stop={stopQueue}
         onExit={() => setSource(null)}
@@ -62,7 +70,7 @@ export function AutismSupport() {
   );
 }
 
-function Picker({ lessons, onPick }: { lessons: Lesson[]; onPick: (title: string, c: LessonContent) => void }) {
+function Picker({ lessons, onPick }: { lessons: Lesson[]; onPick: (l: Lesson) => void }) {
   const list = "grid gap-4 sm:grid-cols-2";
   const card = "flex flex-col items-start gap-3 rounded-3xl bg-white p-6 text-left card-border";
   return (
@@ -83,7 +91,7 @@ function Picker({ lessons, onPick }: { lessons: Lesson[]; onPick: (title: string
         <h2 id="pick" className="mb-4 text-2xl font-bold text-ink">Choose a lesson</h2>
         <ul className={list}>
           <li>
-            <button type="button" onClick={() => onPick("Photosynthesis (sample)", sampleLesson as LessonContent)} className={`${card} w-full hover:bg-brand-soft`}>
+            <button type="button" onClick={() => onPick(SAMPLE)} className={`${card} w-full hover:bg-brand-soft`}>
               <span className="text-xl font-bold text-ink">Photosynthesis</span>
               <span className="text-body">Sample lesson. Good for trying this out.</span>
               <span className="mt-1 font-semibold text-brand">Start</span>
@@ -91,7 +99,7 @@ function Picker({ lessons, onPick }: { lessons: Lesson[]; onPick: (title: string
           </li>
           {lessons.map((l) => (
             <li key={l.id}>
-              <button type="button" onClick={() => onPick(l.title, l)} className={`${card} w-full hover:bg-brand-soft`}>
+              <button type="button" onClick={() => onPick(l)} className={`${card} w-full hover:bg-brand-soft`}>
                 <span className="text-xl font-bold text-ink">{l.title}</span>
                 <span className="line-clamp-2 text-body">{l.summary}</span>
                 <span className="mt-1 font-semibold text-brand">Start</span>
@@ -107,14 +115,15 @@ function Picker({ lessons, onPick }: { lessons: Lesson[]; onPick: (title: string
   );
 }
 
-function Session({ title, content, speak, stop, onExit }: {
-  title: string;
-  content: LessonContent;
-  speak: (id: string, text: string) => void;
+function Session({ lesson, speak, stop, onExit }: {
+  lesson: Lesson;
+  speak: (id: string, text: string, onEnd?: () => void) => void;
   stop: () => void;
   onExit: () => void;
 }) {
-  const tasks = useMemo(() => buildTasks(content), [content]);
+  const title = lesson.title;
+  const tasks = useMemo(() => buildTasks(lesson), [lesson]);
+  const [reading, setReading] = useState(false);
   const [i, setI] = useState(0);
   const [picked, setPicked] = useState<string | null>(null);
   const [checked, setChecked] = useState(false);
@@ -124,13 +133,35 @@ function Session({ title, content, speak, stop, onExit }: {
 
   useEffect(() => {
     headingRef.current?.focus({ preventScroll: true });
-    return () => stop();
-  }, [i, stop]);
+  }, [i]);
+  useEffect(() => () => stop(), [stop]); // leaving the lesson stops any reading
 
   const go = (n: number) => {
+    stop();
+    setReading(false);
     setI(Math.max(0, Math.min(tasks.length - 1, n)));
     setPicked(null);
     setChecked(false);
+  };
+
+  /** Read this task out loud, then carry on to the next ones. It stops at a question, so it waits for the answer. */
+  function readFrom(n: number) {
+    const t = tasks[n];
+    if (!t || t.kind === "done") return setReading(false);
+    setReading(true);
+    setI(n);
+    setPicked(null);
+    setChecked(false);
+    const text =
+      t.kind === "read" ? `${t.title}. ${t.lines.join(" ")}`
+      : t.kind === "look" ? `Look at the picture. ${lesson.visualDescriptions[0]?.description ?? ""}`
+      : t.kind === "practice" ? `${t.question}. ${t.options.map((o, k) => `${LETTERS[k]}. ${o}`).join(". ")}`
+      : "";
+    speak(`task-${n}`, text, () => (t.kind === "read" || t.kind === "look" ? readFrom(n + 1) : setReading(false)));
+  }
+  const stopReading = () => {
+    stop();
+    setReading(false);
   };
   const big = "min-h-16 rounded-2xl px-8 text-xl font-bold";
 
@@ -194,6 +225,23 @@ function Session({ title, content, speak, stop, onExit }: {
               <button type="button" onClick={() => speak(`task-${i}`, `${task.title}. ${task.lines.join(" ")}`)} className={`${big} inline-flex items-center gap-2 bg-white text-brand-deep card-border`}>
                 <Volume2 className="size-5" aria-hidden /> Listen
               </button>
+              <button type="button" aria-pressed={reading} onClick={() => (reading ? stopReading() : readFrom(i))} className={`${big} inline-flex items-center gap-2 card-border ${reading ? "bg-brand-deep text-white" : "bg-white text-brand-deep"}`}>
+                {reading ? <><Square className="size-5" aria-hidden /> Stop reading</> : <><Volume2 className="size-5" aria-hidden /> Read from here</>}
+              </button>
+            </div>
+          </>
+        )}
+
+        {task.kind === "look" && (
+          <>
+            <h2 id="now" ref={headingRef} tabIndex={-1} className="text-3xl font-bold text-ink outline-none">Look at the picture</h2>
+            <p className="mt-2 text-lg font-semibold text-body">Look at it. Press Describe image if you want it in words. Then press Done.</p>
+            <div className="mt-6"><LessonVisual lesson={lesson} /></div>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <button type="button" onClick={() => go(i + 1)} className={`${big} bg-brand text-white`}>Done <span aria-hidden>✓</span></button>
+              <button type="button" aria-pressed={reading} onClick={() => (reading ? stopReading() : readFrom(i))} className={`${big} inline-flex items-center gap-2 card-border ${reading ? "bg-brand-deep text-white" : "bg-white text-brand-deep"}`}>
+                {reading ? <><Square className="size-5" aria-hidden /> Stop reading</> : <><Volume2 className="size-5" aria-hidden /> Read from here</>}
+              </button>
             </div>
           </>
         )}
@@ -240,6 +288,9 @@ function Session({ title, content, speak, stop, onExit }: {
               )}
               <button type="button" onClick={() => speak(`task-${i}`, `${task.question}. ${task.options.join(". ")}`)} className={`${big} inline-flex items-center gap-2 bg-white text-brand-deep card-border`}>
                 <Volume2 className="size-5" aria-hidden /> Listen
+              </button>
+              <button type="button" aria-pressed={reading} onClick={() => (reading ? stopReading() : readFrom(i))} className={`${big} inline-flex items-center gap-2 card-border ${reading ? "bg-brand-deep text-white" : "bg-white text-brand-deep"}`}>
+                {reading ? <><Square className="size-5" aria-hidden /> Stop reading</> : <><Volume2 className="size-5" aria-hidden /> Read from here</>}
               </button>
             </div>
           </>

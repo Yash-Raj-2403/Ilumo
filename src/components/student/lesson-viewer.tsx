@@ -2,11 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Eye, Focus, Volume2 } from "lucide-react";
+import { Eye, Focus, Layers, Volume2 } from "lucide-react";
 import type { Lesson, QuizFeedback } from "@/lib/lesson-types";
+import { CATEGORIES } from "@/lib/categories";
 import { authedFetch } from "@/lib/supabase/authed-fetch";
 import { ReadAloudControls } from "./accessibility-controls";
-import { PhotosynthesisDiagram } from "./photosynthesis-diagram";
+import { FlashcardQuiz } from "./flashcard-quiz";
+import { Flashcards } from "./flashcards";
+import { LessonVisual } from "./lesson-visual";
 import { Quiz } from "./quiz";
 import { useStudent, type ReadItem } from "./student-provider";
 
@@ -15,6 +18,8 @@ export function LessonViewer({ id }: { id: string }) {
   const { ready, getLesson } = s;
   const [remote, setRemote] = useState<Lesson | null | undefined>(undefined);
   const [view, setView] = useState<"learn" | "quiz" | "results">("learn");
+  // People who use autism support take the test as flashcards (type an answer, the card flips).
+  const [quizMode, setQuizMode] = useState<"cards" | "choices">(s.supports.includes("autism") ? "cards" : "choices");
 
   // Find the lesson: browser storage first, then the server's session copy.
   const local = ready ? getLesson(id) : undefined;
@@ -45,17 +50,23 @@ export function LessonViewer({ id }: { id: string }) {
 
   const saved = s.progress[lesson.id]?.quiz;
 
-  if (view === "quiz")
-    return (
-      <Quiz
-        lesson={lesson}
-        onDone={(answers, feedback) => {
-          s.saveQuizResult(lesson.id, answers, feedback);
-          setView("results");
-          window.scrollTo({ top: 0 });
-        }}
-      />
+  if (view === "quiz") {
+    const done = (answers: (string | null)[], feedback: QuizFeedback) => {
+      s.saveQuizResult(lesson.id, answers, feedback);
+      setView("results");
+      window.scrollTo({ top: 0 });
+    };
+    return quizMode === "cards" ? (
+      <FlashcardQuiz lesson={lesson} onDone={done} onSwitch={() => setQuizMode("choices")} />
+    ) : (
+      <div className="space-y-4">
+        {s.supports.includes("autism") && (
+          <button type="button" onClick={() => setQuizMode("cards")} className="min-h-11 rounded-full bg-white px-5 font-semibold text-brand-deep card-border hover:bg-brand-soft">Use flashcards instead</button>
+        )}
+        <Quiz lesson={lesson} onDone={done} />
+      </div>
     );
+  }
   if (view === "results" && saved)
     return <Results lesson={lesson} feedback={saved.feedback} onRetake={() => setView("quiz")} onReview={() => setView("learn")} />;
 
@@ -63,8 +74,11 @@ export function LessonViewer({ id }: { id: string }) {
 }
 
 function Learn({ lesson, hasResults, onQuiz, onResults }: { lesson: Lesson; hasResults: boolean; onQuiz: () => void; onResults: () => void }) {
-  const { settings, updateSettings, stepTextSize, speech, speakOne, playQueue, registerReadables, markSectionRead } = useStudent();
+  const { settings, updateSettings, stepTextSize, speech, speakOne, playQueue, registerReadables, markSectionRead, supports, saveLesson } = useStudent();
   const focus = settings.focusMode;
+  const [showCards, setShowCards] = useState(false);
+  const [describeNote, setDescribeNote] = useState<string | null>(null);
+  const [describeSignal, setDescribeSignal] = useState(0);
 
   const items = useMemo<ReadItem[]>(
     () => [
@@ -108,19 +122,41 @@ function Learn({ lesson, hasResults, onQuiz, onResults }: { lesson: Lesson; hasR
         {lesson.source === "mock" && (
           <p className="mt-2 text-sm font-semibold text-body">Sample lesson</p>
         )}
+        {lesson.supports && lesson.supports.length > 0 && (
+          <p className="mt-2 text-sm font-semibold text-body">
+            Adapted for: {lesson.supports.map((s) => CATEGORIES.find((c) => c.slug === s)?.short ?? s).join(", ")}
+          </p>
+        )}
       </header>
 
       <div role="toolbar" aria-label="Lesson tools" className="flex flex-wrap items-center gap-2 rounded-3xl bg-tint-purple p-3 card-border">
         <ReadAloudControls compact />
         <button type="button" onClick={() => stepTextSize(-1)} className={toolOff}><span aria-hidden>A−</span><span className="sr-only">Smaller text</span></button>
         <button type="button" onClick={() => stepTextSize(1)} className={toolOff}><span aria-hidden>A+</span><span className="sr-only">Larger text</span></button>
-        <button type="button" aria-pressed={settings.describeImages} onClick={() => updateSettings({ describeImages: !settings.describeImages })} className={settings.describeImages ? toolOn : toolOff}>
+        <button
+          type="button"
+          onClick={() => {
+            if (!hasVisual) return setDescribeNote("This lesson has no pictures or diagrams to describe.");
+            setDescribeNote(null);
+            document.getElementById("l-visual")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+            setDescribeSignal((n) => n + 1);
+          }}
+          className={toolOff}
+        >
           <Eye className="size-4" aria-hidden /> Describe Images
         </button>
         <button type="button" aria-pressed={focus} onClick={() => updateSettings({ focusMode: !focus })} className={focus ? toolOn : toolOff}>
           <Focus className="size-4" aria-hidden /> Focus Mode
         </button>
+        {supports.includes("autism") && (
+          <button type="button" aria-pressed={showCards} onClick={() => setShowCards((v) => !v)} className={showCards ? toolOn : toolOff}>
+            <Layers className="size-4" aria-hidden /> Flashcards
+          </button>
+        )}
       </div>
+      <p aria-live="polite" className={describeNote ? "-mt-6 rounded-2xl bg-tint-yellow p-3 font-semibold text-ink" : "sr-only"}>{describeNote}</p>
+
+      {showCards && <Flashcards lesson={lesson} />}
 
       <section aria-labelledby="l-summary" className={`${card} bg-tint-yellow${hl("summary")}`}>
         <h2 id="l-summary" className="text-2xl font-bold text-ink">Quick Summary</h2>
@@ -164,17 +200,16 @@ function Learn({ lesson, hasResults, onQuiz, onResults }: { lesson: Lesson; hasR
       )}
 
       {hasVisual && (
-        <section aria-labelledby="l-visual" className="space-y-5">
-          <h2 id="l-visual" className="text-3xl font-bold text-ink">Visual Information</h2>
-          {lesson.visual?.kind === "sample" && <figure><PhotosynthesisDiagram /></figure>}
-          {lesson.visual?.kind === "image" && (
-            <figure>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={lesson.visual.dataUrl} alt={lesson.visualDescriptions[0]?.title ?? lesson.visual.alt} className="max-h-[28rem] w-full rounded-2xl bg-white object-contain card-border" />
-            </figure>
-          )}
-          {lesson.visualDescriptions.map((v, i) => (
-            <Description key={i} v={v} defaultOpen={settings.describeImages} className={hl(`visual-${i}`)} onHear={() => speakOne(`visual-${i}`, `${v.title}. ${v.description}`)} />
+        <section id="l-visual" aria-labelledby="l-visual-h" className="scroll-mt-28 space-y-5">
+          <h2 id="l-visual-h" className="text-3xl font-bold text-ink">Visual Information</h2>
+          <LessonVisual
+            lesson={lesson}
+            autoDescribe={settings.describeImages}
+            signal={describeSignal}
+            onDescribed={(d) => saveLesson({ ...lesson, visualDescriptions: [d, ...lesson.visualDescriptions] })}
+          />
+          {lesson.visualDescriptions.slice(1).map((v, i) => (
+            <Description key={i + 1} v={v} defaultOpen={settings.describeImages} className={hl(`visual-${i + 1}`)} onHear={() => speakOne(`visual-${i + 1}`, `${v.title}. ${v.description}`)} />
           ))}
         </section>
       )}

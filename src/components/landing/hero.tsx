@@ -26,7 +26,7 @@ function UniqueWay() {
 const badges = [
   { title: "Listen", href: "/student/support/blind-low-vision", sub: "instead of just read", icon: Volume2, bg: "bg-tint-blue", ring: "bg-blue-100 text-blue-600", pos: "sm:left-[-2%] sm:top-[3%]", z: 110, delay: "0s", rot: "sm:-rotate-3" },
   { title: "See", href: "/student/support/blind-low-vision", sub: "with clearer details", icon: Eye, bg: "bg-tint-green", ring: "bg-emerald-100 text-emerald-600", pos: "sm:right-[-2%] sm:top-[8%]", z: 90, delay: "1.2s", rot: "sm:rotate-3" },
-  { title: "Speak", sub: "and be heard", icon: Mic, bg: "bg-tint-pink", ring: "bg-rose-100 text-rose-500", pos: "sm:bottom-[17%] sm:left-[-4%]", z: 120, delay: "2.1s", rot: "sm:-rotate-3" },
+  { title: "Speak", href: "/student/support/speech", sub: "and be heard", icon: Mic, bg: "bg-tint-pink", ring: "bg-rose-100 text-rose-500", pos: "sm:bottom-[17%] sm:left-[-4%]", z: 120, delay: "2.1s", rot: "sm:-rotate-3" },
   { title: "Learn", href: "/student/support/autism", sub: "without limits", icon: Brain, bg: "bg-tint-purple", ring: "bg-violet-100 text-violet-600", pos: "sm:bottom-[24%] sm:right-[-3%]", z: 100, delay: "0.6s", rot: "sm:rotate-3" },
 ];
 

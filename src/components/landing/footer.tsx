@@ -2,16 +2,18 @@ import Link from "next/link";
 import { Logo } from "./logo";
 
 const links = [
-  { label: "About", href: "/#about" },
+  { label: "About", href: "/about" },
   { label: "Features", href: "/#features" },
-  { label: "Our Impact", href: "/#impact" },
+  { label: "Our Impact", href: "/impact" },
+  { label: "Awareness", href: "/blog" },
   { label: "For Parents", href: "/signup?role=parent" },
-  { label: "Contact", href: "/#contact" },
+  { label: "Contact", href: "/contact" },
 ];
+
 
 export function Footer() {
   return (
-    <footer id="contact" className="scroll-mt-24 bg-white">
+    <footer className="bg-white">
       <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-12 sm:px-6 md:flex-row md:items-start md:justify-between lg:px-8">
         <div>
           <Logo />

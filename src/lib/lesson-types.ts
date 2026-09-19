@@ -1,4 +1,5 @@
 // Shared lesson shapes. Mock and real (Gemini) responses both use these.
+import type { CategorySlug } from "./categories";
 
 export type LessonSection = { heading: string; content: string };
 export type VisualDescription = { title: string; description: string };
@@ -25,6 +26,8 @@ export type Lesson = LessonContent & {
   createdAt: string;
   /** Where the lesson came from: real Gemini output or the bundled sample. */
   source: "gemini" | "mock";
+  /** Which kinds of support this lesson was adapted for (empty or missing = all of them). */
+  supports?: CategorySlug[];
   /** "sample" shows the built-in diagram; "image" shows the uploaded picture. */
   visual?: { kind: "sample" } | { kind: "image"; dataUrl: string; alt: string };
 };

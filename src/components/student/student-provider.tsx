@@ -25,6 +25,12 @@ export type Settings = {
   captions: { size: "m" | "l" | "xl" | "xxl"; theme: "dark" | "light" | "yellow" };
   /** A sign-language video someone attached to a lesson: lesson id -> web address. */
   signVideos: Record<string, string>;
+  /** Extra words and phrases someone added to their communication board. */
+  aacCustom: { emoji: string; label: string }[];
+  /** Physical/motor access options. */
+  motor: { size: "l" | "xl" | "xxl"; scan: boolean; scanSeconds: number; dwell: boolean; dwellMs: number; timeFactor: number; voice: boolean };
+  /** Comfortable-reading options for dyslexia and other reading difficulties. */
+  reading: { font: "standard" | "lexend" | "atkinson"; size: number; lineHeight: number; letterSpacing: number; tint: "none" | "cream" | "blue" | "peach" | "green"; ruler: boolean };
 };
 export type Progress = {
   sectionsRead: number[];
@@ -91,6 +97,9 @@ function defaultSettings(p: StudentProfile): Settings {
     speechRate: 1,
     captions: { size: "l", theme: "dark" },
     signVideos: {},
+    aacCustom: [],
+    motor: { size: "xl", scan: false, scanSeconds: 2, dwell: false, dwellMs: 1500, timeFactor: 0, voice: false },
+    reading: { font: "lexend", size: 1.25, lineHeight: 2, letterSpacing: 0.05, tint: "cream", ruler: false },
   };
 }
 
@@ -150,7 +159,15 @@ export function StudentProvider({ children }: { children: React.ReactNode }) {
         };
         const base = defaultsFor(toStudent(me));
         const saved = profile?.settings && typeof profile.settings === "object" ? (profile.settings as Partial<Settings>) : {};
-        const merged: Settings = { ...base, ...saved };
+        const merged: Settings = {
+          ...base,
+          ...saved,
+          captions: { ...base.captions, ...saved.captions },
+          motor: { ...base.motor, ...saved.motor },
+          reading: { ...base.reading, ...saved.reading },
+          signVideos: { ...base.signVideos, ...saved.signVideos },
+          aacCustom: Array.isArray(saved.aacCustom) ? saved.aacCustom : base.aacCustom,
+        };
         const own = normalizeSupports(saved.supports);
         merged.supports = own.length ? own : normalizeSupports(profile?.child?.needs).length ? normalizeSupports(profile?.child?.needs) : null;
         lastSavedSettings.current = JSON.stringify(merged);

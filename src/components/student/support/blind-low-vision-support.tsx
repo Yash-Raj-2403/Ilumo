@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, Copy, Download, FileUp, Image as ImageIcon, Pause, Play, Printer, SkipBack, SkipForward, Square } from "lucide-react";
 import sampleLesson from "@/data/mockPhotosynthesisLesson.json";
 import type { Lesson, LessonContent } from "@/lib/lesson-types";
+import { lessonsFor } from "@/lib/categories";
 import { DEFAULT_LAYOUT, paginate, toBRF, toBraille } from "@/lib/braille";
 import { authedFetch } from "@/lib/supabase/authed-fetch";
 import { findBestBlock, parseCommand, rateWords, stepRate } from "@/lib/voice/commands";
@@ -40,7 +41,8 @@ const textToDoc = (title: string, text: string): Doc =>
 const spoken = (b: Block) => (b.kind === "image" ? `Image description. ${b.text}` : b.text);
 
 export function BlindLowVisionSupport() {
-  const { lessons } = useStudent();
+  const { lessons: all } = useStudent();
+  const lessons = lessonsFor(all, "blind-low-vision");
   const voice = useVoiceMode();
   const [doc, setDoc] = useState<Doc | null>(null);
 
