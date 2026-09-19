@@ -5,7 +5,7 @@ const links = [
   { label: "About", href: "/#about" },
   { label: "Features", href: "/#features" },
   { label: "Our Impact", href: "/#impact" },
-  { label: "For Parents", href: "/parents" },
+  { label: "For Parents", href: "/signup?role=parent" },
   { label: "Contact", href: "/#contact" },
 ];
 

@@ -4,6 +4,14 @@
   --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
   --font-hand: var(--font-caveat), cursive;
 
+  --animate-float: float 6s ease-in-out infinite;
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+}
+
+@theme {
   --color-canvas: #fbfaff;
   --color-ink: #10123f;
   --color-body: #4b4e6d;
@@ -16,17 +24,52 @@
   --color-tint-green: #e3f6e3;
   --color-tint-purple: #ece8fb;
   --color-tint-yellow: #fff1cc;
-
-  --animate-float: float 6s ease-in-out infinite;
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
-  }
 }
 
 html {
   scroll-behavior: smooth;
 }
+
+/* Student accessibility settings (set on <html> by StudentProvider) */
+html[data-text-size="small"] { font-size: 14px; }
+html[data-text-size="large"] { font-size: 19px; }
+html[data-text-size="xl"] { font-size: 22px; }
+
+html[data-contrast="high"] {
+  --color-canvas: #ffffff;
+  --color-ink: #000000;
+  --color-body: #000000;
+  --color-brand: #2312b5;
+  --color-brand-deep: #120a5c;
+  --color-brand-soft: #ffffff;
+  --color-tint-pink: #ffffff;
+  --color-tint-blue: #ffffff;
+  --color-tint-green: #ffffff;
+  --color-tint-purple: #ffffff;
+  --color-tint-yellow: #fff7cc;
+}
+
+/* Autism / low-distraction view: quieter colours, no motion. Skipped when high contrast is on. */
+html:not([data-contrast="high"]) .calm-theme {
+  --color-canvas: #f6f7f5;
+  --color-ink: #1f2933;
+  --color-body: #4a5561;
+  --color-brand: #3b6b8f;
+  --color-brand-deep: #1f3d57;
+  --color-brand-soft: #e6eef4;
+  --color-tint-pink: #f3ecec;
+  --color-tint-blue: #e8eff4;
+  --color-tint-green: #e8f0ea;
+  --color-tint-purple: #eceaf2;
+  --color-tint-yellow: #f4f0e4;
+}
+.calm-theme *, .calm-theme *::before, .calm-theme *::after { animation: none !important; transition: none !important; }
+
+.card-border { border: 1px solid rgb(37 29 107 / 0.08); box-shadow: 0 8px 28px rgb(60 40 120 / 0.06); }
+html[data-contrast="high"] .card-border { border: 2px solid #000; box-shadow: none; }
+html[data-keys="on"] :focus-visible { outline-width: 4px; outline-offset: 4px; outline-color: #d9480f; }
+
+.reading-highlight { box-shadow: 0 0 0 4px var(--color-brand); }
 
 body {
   background: var(--color-canvas);
@@ -51,4 +94,19 @@ body {
     animation: none !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Printing braille and large text: only the print-only copy is shown. */
+#print-area { display: none; }
+@media print {
+  body > *:not(#print-area) { display: none !important; }
+  #print-area { display: block; color: #000; background: #fff; }
+  .print-braille-page {
+    font-family: "DejaVu Sans", "Segoe UI Symbol", "Apple Braille", monospace;
+    font-size: 15pt; line-height: 1.5; white-space: pre; margin: 0; break-after: page; page-break-after: always;
+  }
+  .print-large { font-family: Arial, Helvetica, sans-serif; font-size: 24pt; line-height: 1.5; font-weight: 500; }
+  .print-large h1 { font-size: 34pt; margin: 0 0 0.6em; }
+  .print-large h2 { font-size: 28pt; margin: 1em 0 0.3em; }
+  .print-large p { margin: 0 0 0.8em; }
 }

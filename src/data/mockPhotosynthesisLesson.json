@@ -1,0 +1,66 @@
+{
+  "title": "Photosynthesis",
+  "summary": "Plants use sunlight, water and carbon dioxide to make their own food, and they give out oxygen while they do it.",
+  "sections": [
+    {
+      "heading": "What is photosynthesis?",
+      "content": "Photosynthesis is the process plants use to make food. It happens mainly in the leaves, which contain a green substance called chlorophyll."
+    },
+    {
+      "heading": "Why is sunlight important?",
+      "content": "Chlorophyll catches energy from sunlight. The plant uses this energy to turn water and carbon dioxide into sugar. Without light, the plant cannot make its food."
+    },
+    {
+      "heading": "What goes in?",
+      "content": "Water travels up from the soil through the roots. Carbon dioxide, a gas in the air, enters the leaves through tiny holes called stomata."
+    },
+    {
+      "heading": "What comes out?",
+      "content": "The plant makes sugar, which it uses for energy and growth. It also releases oxygen into the air, which people and animals need to breathe."
+    }
+  ],
+  "keyPoints": [
+    "Plants need sunlight.",
+    "Plants need water from the soil.",
+    "Plants take in carbon dioxide from the air.",
+    "Plants make sugar and release oxygen."
+  ],
+  "visualDescriptions": [
+    {
+      "title": "Photosynthesis diagram",
+      "description": "The diagram shows a green plant in the middle. A bright sun sits in the top corner, with rays of sunlight pointing down at the leaves. Arrows show water moving up from the roots underground, and carbon dioxide arrows entering the leaves from the air. Another arrow leaves the plant, labelled oxygen, and a label inside the leaf says sugar is made there."
+    }
+  ],
+  "importantTerms": [
+    { "term": "Photosynthesis", "meaning": "The process plants use to make food from light, water and carbon dioxide." },
+    { "term": "Chlorophyll", "meaning": "The green substance in leaves that catches sunlight." },
+    { "term": "Stomata", "meaning": "Tiny holes in leaves that let carbon dioxide in and oxygen out." },
+    { "term": "Carbon dioxide", "meaning": "A gas in the air that plants take in." }
+  ],
+  "quiz": [
+    {
+      "question": "What does a plant need to make food?",
+      "options": ["Rocks", "Sunlight", "Snow", "Moonlight"],
+      "correctAnswer": "Sunlight",
+      "explanation": "Plants use energy from sunlight, together with water and carbon dioxide, to make food."
+    },
+    {
+      "question": "Which gas do plants release during photosynthesis?",
+      "options": ["Oxygen", "Smoke", "Carbon dioxide", "Steam"],
+      "correctAnswer": "Oxygen",
+      "explanation": "Plants take in carbon dioxide and give out oxygen."
+    },
+    {
+      "question": "How does water reach the leaves?",
+      "options": ["Through the roots", "From the flowers", "Through the stomata", "From the sun"],
+      "correctAnswer": "Through the roots",
+      "explanation": "Roots take in water from the soil and it travels up to the leaves."
+    },
+    {
+      "question": "What is chlorophyll?",
+      "options": ["A kind of soil", "A gas", "The green substance that catches sunlight", "A type of seed"],
+      "correctAnswer": "The green substance that catches sunlight",
+      "explanation": "Chlorophyll is the green substance in leaves that captures light energy."
+    }
+  ]
+}

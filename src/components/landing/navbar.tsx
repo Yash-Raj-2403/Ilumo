@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, Brain, Eye, Menu as MenuIcon, Mic, Volume2, X } from "lucide-react";
+import { Accessibility, ArrowRight, BookOpen, Ear, Eye, LayoutDashboard, LogOut, Menu as MenuIcon, MessageCircle, Puzzle, X } from "lucide-react";
+import { useAuthSession } from "@/lib/supabase/use-session";
+import { useMyProfile } from "@/lib/supabase/use-supports";
+import { CATEGORIES, categoryHref } from "@/lib/categories";
 import { HoveredLink, Menu, MenuItem, ProductItem } from "@/components/ui/navbar-menu";
 import { Logo } from "./logo";
 
@@ -14,22 +18,45 @@ const links = [
   { label: "About", href: "/#about", id: "about" },
   { label: "Features", href: "/#features", id: "features" },
   { label: "Our Impact", href: "/#impact", id: "impact" },
-  { label: "For Parents", href: "/parents", id: "parents" },
+  { label: "For Parents", href: "/signup?role=parent", id: "parents" },
   { label: "Contact", href: "/#contact", id: "contact" },
 ];
 
-const supports = [
-  { title: "Audio Support", description: "Text-to-speech and audio summaries", icon: <Volume2 className="size-5 text-rose-500" />, bg: "bg-tint-pink" },
-  { title: "Visual Support", description: "OCR, alt-text and screen readers", icon: <Eye className="size-5 text-blue-600" />, bg: "bg-tint-blue" },
-  { title: "Speech Support", description: "Speech-to-text and AAC", icon: <Mic className="size-5 text-emerald-600" />, bg: "bg-tint-green" },
-  { title: "Cognitive Support", description: "Focus mode and simplified content", icon: <Brain className="size-5 text-violet-600" />, bg: "bg-tint-purple" },
-];
+const ICON_BY_SLUG = {
+  autism: { icon: <Puzzle className="size-5 text-amber-600" />, bg: "bg-tint-yellow" },
+  "blind-low-vision": { icon: <Eye className="size-5 text-blue-600" />, bg: "bg-tint-blue" },
+  "deaf-hoh": { icon: <Ear className="size-5 text-rose-500" />, bg: "bg-tint-pink" },
+  speech: { icon: <MessageCircle className="size-5 text-emerald-600" />, bg: "bg-tint-green" },
+  motor: { icon: <Accessibility className="size-5 text-violet-600" />, bg: "bg-tint-purple" },
+  learning: { icon: <BookOpen className="size-5 text-sky-600" />, bg: "bg-tint-blue" },
+} as const;
+
+const allSupports = CATEGORIES.map((c) => ({
+  slug: c.slug,
+  title: c.title,
+  description: c.ready ? c.summary : "Coming soon",
+  href: c.ready ? categoryHref(c) : "/#features",
+  ...ICON_BY_SLUG[c.slug],
+}));
 
 export function Navbar() {
   const [active, setActive] = useState<string | null>(null);
-  const [current, setCurrent] = useState<string>("home");
+  const [landingCurrent, setCurrent] = useState<string>("home");
+  const pathname = usePathname();
+  // On the landing page the highlight follows scrolling; inside the student area no section is "current".
+  const current = pathname === "/" ? landingCurrent : pathname.startsWith("/student/support") ? "features" : null;
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const router = useRouter();
+  const { signedIn, signOut } = useAuthSession();
+  const { role, supports: mine } = useMyProfile();
+  const dashboardHref = role === "parent" ? "/parent" : "/student";
+  const supports = mine === undefined ? [] : mine ? allSupports.filter((s) => mine.includes(s.slug)) : allSupports;
+  const logOut = async () => {
+    setOpen(false);
+    await signOut();
+    router.push("/");
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -77,7 +104,7 @@ export function Navbar() {
                   <MenuItem key={l.id} item={l.label} href={l.href} current={isCurrent} active={active} setActive={setActive}>
                     <div className="grid gap-1 sm:grid-cols-2">
                       {supports.map((s) => (
-                        <ProductItem key={s.title} title={s.title} description={s.description} href="/#features" icon={s.icon} iconBg={s.bg} />
+                        <ProductItem key={s.title} title={s.title} description={s.description} href={s.href} icon={s.icon} iconBg={s.bg} />
                       ))}
                     </div>
                   </MenuItem>
@@ -87,7 +114,7 @@ export function Navbar() {
                   <MenuItem key={l.id} item={l.label} href={l.href} current={isCurrent} active={active} setActive={setActive}>
                     <div className="flex w-56 flex-col gap-3 p-1 text-sm">
                       <p className="text-body">Follow progress and shape the way your child learns.</p>
-                      <HoveredLink href="/parents" className="font-semibold text-brand">
+                      <HoveredLink href="/signup?role=parent" className="font-semibold text-brand">
                         Go to parent space →
                       </HoveredLink>
                     </div>
@@ -99,12 +126,38 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Link
-            href="/#features"
-            className="hidden items-center gap-2 rounded-full bg-brand px-6 py-3 text-[15px] font-semibold text-white shadow-[0_10px_25px_rgba(91,77,245,0.35)] transition hover:bg-[#4a3de0] motion-safe:hover:-translate-y-0.5 sm:inline-flex"
-          >
-            Get Started <ArrowRight className="size-4" aria-hidden />
-          </Link>
+          {signedIn ? (
+            <>
+              <button
+                type="button"
+                onClick={logOut}
+                className="hidden items-center gap-2 rounded-full px-4 py-3 text-[15px] font-semibold text-brand-deep transition hover:bg-brand-soft sm:inline-flex"
+              >
+                <LogOut className="size-4" aria-hidden /> Sign out
+              </button>
+              <Link
+                href={dashboardHref}
+                className="hidden items-center gap-2 rounded-full bg-brand px-6 py-3 text-[15px] font-semibold text-white shadow-[0_10px_25px_rgba(91,77,245,0.35)] transition hover:bg-[#4a3de0] motion-safe:hover:-translate-y-0.5 sm:inline-flex"
+              >
+                <LayoutDashboard className="size-4" aria-hidden /> Dashboard
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="hidden rounded-full px-4 py-3 text-[15px] font-semibold text-brand-deep transition hover:bg-brand-soft sm:inline-flex"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/signup"
+                className="hidden items-center gap-2 rounded-full bg-brand px-6 py-3 text-[15px] font-semibold text-white shadow-[0_10px_25px_rgba(91,77,245,0.35)] transition hover:bg-[#4a3de0] motion-safe:hover:-translate-y-0.5 sm:inline-flex"
+              >
+                Get Started <ArrowRight className="size-4" aria-hidden />
+              </Link>
+            </>
+          )}
           <button
             type="button"
             className="grid size-11 place-items-center rounded-full bg-white text-ink shadow-md lg:hidden"
@@ -144,13 +197,41 @@ export function Navbar() {
                 </li>
               ))}
             </ul>
-            <Link
-              href="/#features"
-              onClick={() => setOpen(false)}
-              className="mt-2 flex items-center justify-center gap-2 rounded-full bg-brand px-6 py-3 font-semibold text-white"
-            >
-              Get Started <ArrowRight className="size-4" aria-hidden />
-            </Link>
+            {signedIn ? (
+              <>
+                <button
+                  type="button"
+                  onClick={logOut}
+                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-full border-2 border-brand-deep/20 px-6 py-3 font-semibold text-brand-deep"
+                >
+                  <LogOut className="size-4" aria-hidden /> Sign out
+                </button>
+                <Link
+                  href={dashboardHref}
+                  onClick={() => setOpen(false)}
+                  className="mt-2 flex items-center justify-center gap-2 rounded-full bg-brand px-6 py-3 font-semibold text-white"
+                >
+                  <LayoutDashboard className="size-4" aria-hidden /> Dashboard
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  onClick={() => setOpen(false)}
+                  className="mt-2 flex items-center justify-center rounded-full border-2 border-brand-deep/20 px-6 py-3 font-semibold text-brand-deep"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/signup"
+                  onClick={() => setOpen(false)}
+                  className="mt-2 flex items-center justify-center gap-2 rounded-full bg-brand px-6 py-3 font-semibold text-white"
+                >
+                  Get Started <ArrowRight className="size-4" aria-hidden />
+                </Link>
+              </>
+            )}
           </motion.nav>
         )}
       </AnimatePresence>

@@ -1,13 +1,22 @@
-import { Brain, Eye, Heart, Mic, Volume2 } from "lucide-react";
+"use client";
 
-const labels = [
-  { name: "Audio", Icon: Volume2, cls: "bg-tint-pink text-rose-600" },
-  { name: "Visual", Icon: Eye, cls: "bg-tint-blue text-blue-700" },
-  { name: "Speech", Icon: Mic, cls: "bg-tint-green text-emerald-700" },
-  { name: "Cognitive", Icon: Brain, cls: "bg-tint-purple text-violet-700" },
-];
+import Link from "next/link";
+import { Accessibility, BookOpen, Ear, Eye, Heart, MessageCircle, Puzzle, type LucideIcon } from "lucide-react";
+import { CATEGORIES, categoryHref, type CategorySlug } from "@/lib/categories";
+import { useMySupports } from "@/lib/supabase/use-supports";
+
+const ICONS: Record<CategorySlug, LucideIcon> = {
+  autism: Puzzle,
+  "blind-low-vision": Eye,
+  "deaf-hoh": Ear,
+  speech: MessageCircle,
+  motor: Accessibility,
+  learning: BookOpen,
+};
 
 export function Impact() {
+  const mine = useMySupports();
+  const categories = mine === undefined ? [] : mine ? CATEGORIES.filter((c) => mine.includes(c.slug)) : CATEGORIES;
   return (
     <section id="impact" aria-labelledby="impact-heading" className="scroll-mt-24 bg-gradient-to-b from-[#f1eeff] to-[#e9e5fd] py-14">
       <div className="mx-auto flex max-w-5xl flex-col items-center gap-8 px-4 text-center sm:px-6 lg:flex-row lg:justify-between lg:text-left">
@@ -21,11 +30,23 @@ export function Impact() {
           <p className="mt-3 text-base text-body">Different abilities. Brighter futures.</p>
         </div>
         <ul className="flex flex-wrap justify-center gap-3">
-          {labels.map(({ name, Icon, cls }) => (
-            <li key={name} className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 font-semibold ${cls}`}>
-              <Icon className="size-4" aria-hidden /> {name}
-            </li>
-          ))}
+          {categories.map((c) => {
+            const Icon = ICONS[c.slug];
+            const chip = `inline-flex items-center gap-2 rounded-full px-5 py-2.5 font-semibold text-ink ${c.card} ring-1 ring-brand-deep/10`;
+            return (
+              <li key={c.slug}>
+                {c.ready ? (
+                  <Link href={categoryHref(c)} className={`${chip} transition motion-safe:hover:-translate-y-0.5 hover:shadow-md`}>
+                    <Icon className="size-4" aria-hidden /> {c.short}
+                  </Link>
+                ) : (
+                  <span className={chip}>
+                    <Icon className="size-4" aria-hidden /> {c.short}
+                  </span>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </div>
     </section>

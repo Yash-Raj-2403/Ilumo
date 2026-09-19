@@ -22,10 +22,10 @@ function UniqueWay() {
 }
 
 const badges = [
-  { title: "Listen", sub: "instead of just read", icon: Volume2, bg: "bg-tint-blue", ring: "bg-blue-100 text-blue-600", pos: "sm:left-[-2%] sm:top-[3%]", z: 110, delay: "0s", rot: "sm:-rotate-3" },
-  { title: "See", sub: "with clearer details", icon: Eye, bg: "bg-tint-green", ring: "bg-emerald-100 text-emerald-600", pos: "sm:right-[-2%] sm:top-[8%]", z: 90, delay: "1.2s", rot: "sm:rotate-3" },
+  { title: "Listen", href: "/student/support/blind-low-vision", sub: "instead of just read", icon: Volume2, bg: "bg-tint-blue", ring: "bg-blue-100 text-blue-600", pos: "sm:left-[-2%] sm:top-[3%]", z: 110, delay: "0s", rot: "sm:-rotate-3" },
+  { title: "See", href: "/student/support/blind-low-vision", sub: "with clearer details", icon: Eye, bg: "bg-tint-green", ring: "bg-emerald-100 text-emerald-600", pos: "sm:right-[-2%] sm:top-[8%]", z: 90, delay: "1.2s", rot: "sm:rotate-3" },
   { title: "Speak", sub: "and be heard", icon: Mic, bg: "bg-tint-pink", ring: "bg-rose-100 text-rose-500", pos: "sm:bottom-[17%] sm:left-[-4%]", z: 120, delay: "2.1s", rot: "sm:-rotate-3" },
-  { title: "Learn", sub: "without limits", icon: Brain, bg: "bg-tint-purple", ring: "bg-violet-100 text-violet-600", pos: "sm:bottom-[24%] sm:right-[-3%]", z: 100, delay: "0.6s", rot: "sm:rotate-3" },
+  { title: "Learn", href: "/student/support/autism", sub: "without limits", icon: Brain, bg: "bg-tint-purple", ring: "bg-violet-100 text-violet-600", pos: "sm:bottom-[24%] sm:right-[-3%]", z: 100, delay: "0.6s", rot: "sm:rotate-3" },
 ];
 
 export function Hero() {
@@ -48,14 +48,14 @@ export function Hero() {
           </p>
           <div className="mt-9 flex flex-wrap gap-4">
             <Link
-              href="/#features"
+              href="/student"
               className="group inline-flex items-center gap-3 rounded-full bg-brand-deep px-7 py-4 text-base font-semibold text-white shadow-[0_14px_30px_rgba(37,29,107,0.3)] transition motion-safe:hover:-translate-y-0.5 hover:bg-[#1a1450]"
             >
               <GraduationCap className="size-5" aria-hidden /> I&apos;m a Student
               <ArrowRight className="size-5 transition-transform motion-safe:group-hover:translate-x-1" aria-hidden />
             </Link>
             <Link
-              href="/parents"
+              href="/signup?role=parent"
               className="group inline-flex items-center gap-3 rounded-full border-2 border-brand-deep/70 bg-white px-7 py-4 text-base font-semibold text-brand-deep transition motion-safe:hover:-translate-y-0.5 hover:bg-brand-soft"
             >
               <Users className="size-5" aria-hidden /> I&apos;m a Parent
@@ -104,10 +104,9 @@ export function Hero() {
               </div>
 
               <ul className="mt-4 grid grid-cols-2 gap-3 sm:contents">
-                {badges.map(({ title, sub, icon: Icon, bg, ring, pos, z, delay, rot }) => (
-                  <li key={title} className={`contents`}>
-                    <CardItem translateZ={z} className={`sm:absolute ${pos} sm:w-[46%] w-full`}>
-                      <div
+                {badges.map(({ title, sub, icon: Icon, bg, ring, pos, z, delay, rot, href }) => {
+                  const card = (
+                  <div
                         style={{ animationDelay: delay }}
                         className={`flex items-center gap-2.5 rounded-2xl border border-white/80 ${bg} p-2.5 shadow-[0_12px_30px_rgba(60,40,120,0.14)] backdrop-blur-sm motion-safe:animate-float sm:gap-3 sm:rounded-3xl sm:p-3.5 ${rot}`}
                       >
@@ -119,9 +118,21 @@ export function Hero() {
                           <span className="block text-xs text-body sm:text-sm">{sub}</span>
                         </span>
                       </div>
+                  );
+                  return (
+                  <li key={title} className="contents">
+                    <CardItem translateZ={z} className={`sm:absolute ${pos} sm:w-[46%] w-full`}>
+                      {href ? (
+                        <Link href={href} aria-label={`${title} ${sub}: try it`} className="block rounded-3xl transition motion-safe:hover:scale-105">
+                          {card}
+                        </Link>
+                      ) : (
+                        card
+                      )}
                     </CardItem>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             </CardBody>
           </CardContainer>
