@@ -19,6 +19,10 @@ export type Settings = {
   keyboardHints: boolean;
   /** Which accessibility categories apply to this person (null = never asked). */
   supports: CategorySlug[] | null;
+  /** Show the Explore shelf of basics for ages 5 to 10. */
+  explore: boolean;
+  /** Best star score (1 to 3) for each Game Zone game. */
+  gameStars: Record<string, number>;
   /** Text-to-speech speed, 0.75 to 2. */
   speechRate: number;
   /** How captions look (size and colours). */
@@ -94,6 +98,8 @@ function defaultSettings(p: StudentProfile): Settings {
     describeImages: p.accessibilityProfile.imageDescriptions,
     keyboardHints: p.accessibilityProfile.keyboardNavigation,
     supports: null,
+    explore: false,
+    gameStars: {},
     speechRate: 1,
     captions: { size: "l", theme: "dark" },
     signVideos: {},
@@ -166,8 +172,11 @@ export function StudentProvider({ children }: { children: React.ReactNode }) {
           motor: { ...base.motor, ...saved.motor },
           reading: { ...base.reading, ...saved.reading },
           signVideos: { ...base.signVideos, ...saved.signVideos },
+          gameStars: { ...base.gameStars, ...saved.gameStars },
           aacCustom: Array.isArray(saved.aacCustom) ? saved.aacCustom : base.aacCustom,
         };
+        // A child aged 5 to 10 gets the Explore shelf unless they or a parent switched it off.
+        if (saved.explore === undefined && me.child && me.child.age >= 5 && me.child.age <= 10) merged.explore = true;
         const own = normalizeSupports(saved.supports);
         merged.supports = own.length ? own : normalizeSupports(profile?.child?.needs).length ? normalizeSupports(profile?.child?.needs) : null;
         lastSavedSettings.current = JSON.stringify(merged);

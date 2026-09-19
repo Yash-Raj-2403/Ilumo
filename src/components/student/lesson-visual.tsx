@@ -61,6 +61,16 @@ export function LessonVisual({ lesson, autoDescribe = false, signal = 0, onDescr
   return (
     <section aria-label="Picture" className="space-y-4">
       {lesson.visual?.kind === "sample" && <figure><PhotosynthesisDiagram /></figure>}
+      {lesson.visual?.kind === "emoji" && (
+        <ul className="flex flex-wrap gap-4" aria-label="Pictures">
+          {lesson.visual.items.map((it) => (
+            <li key={it.label} className="flex min-w-24 flex-col items-center gap-1 rounded-3xl bg-white p-4 card-border">
+              <span aria-hidden className="text-6xl leading-none">{it.e}</span>
+              <span className="text-lg font-bold text-ink">{it.label}</span>
+            </li>
+          ))}
+        </ul>
+      )}
       {image && (
         <figure>
           {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { BookOpen, LineChart, Settings, Sparkles, Upload, Dumbbell } from "lucide-react";
+import { GAMES } from "@/components/student/games/catalog";
 import { CATEGORIES, categoryHref } from "@/lib/categories";
 import { useStudent } from "@/components/student/student-provider";
 import { EmptyLessons, LessonCard, ProgressBar } from "@/components/student/lesson-card";
@@ -40,6 +41,25 @@ function HomeContent() {
         </h1>
         <p className="mt-2 text-xl text-body">Ready to learn something new?</p>
       </header>
+
+      {settings.explore && (
+        <section aria-labelledby="explore-h" className="rounded-3xl bg-tint-yellow p-6 card-border sm:p-8">
+          <h2 id="explore-h" className="text-3xl font-bold text-ink">Game Zone <span aria-hidden>🎮</span></h2>
+          <p className="mt-1 text-xl text-body">Short games with pictures, sounds and kind hints.</p>
+          <ul className="mt-5 flex flex-wrap gap-3" aria-label="Games">
+            {GAMES.map((g) => (
+              <li key={g.id}>
+                <Link href={`/student/games/${g.id}`} className="inline-flex min-h-14 items-center gap-2 rounded-full bg-white px-5 text-lg font-bold text-ink card-border hover:bg-brand-soft">
+                  <span aria-hidden className="text-2xl">{g.emoji}</span>{g.title}
+                </Link>
+              </li>
+            ))}
+            <li>
+              <Link href="/student/games" className="inline-flex min-h-14 items-center rounded-full px-5 text-lg font-bold text-brand underline underline-offset-4">See all games</Link>
+            </li>
+          </ul>
+        </section>
+      )}
 
       <section aria-labelledby="continue">
         <h2 id="continue" className="mb-4 text-2xl font-bold text-ink">Continue Learning</h2>

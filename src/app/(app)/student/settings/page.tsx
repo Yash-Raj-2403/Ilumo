@@ -151,6 +151,18 @@ function SupportSection() {
   );
 }
 
+function ExploreSection() {
+  const { settings, updateSettings } = useStudent();
+  return (
+    <Section id="explore" title="Game Zone for ages 5 to 10" intro="Short games and ready-made lessons on letters, numbers, animals, feelings and more, with all your support switched on.">
+      <label className="flex min-h-12 cursor-pointer items-center gap-3 text-lg font-semibold text-ink">
+        <input type="checkbox" checked={settings.explore} onChange={(e) => updateSettings({ explore: e.target.checked })} className="size-6 accent-[#221a63]" />
+        Show the Game Zone in my learning space
+      </label>
+    </Section>
+  );
+}
+
 function PasswordSection() {
   const { user } = useStudent();
   const [current, setCurrent] = useState("");
@@ -212,6 +224,7 @@ export default function SettingsPage() {
 
       <ProfileSection />
       {user.role === "student" && <SupportSection />}
+      {user.role === "student" && <ExploreSection />}
       <PasswordSection />
 
       <Section id="display" title="Reading and display" intro="How text and audio work for you everywhere in ILUMO.">

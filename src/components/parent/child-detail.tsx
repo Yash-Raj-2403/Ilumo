@@ -42,6 +42,7 @@ export function ChildDetail({ id }: { id: string }) {
     { label: "Lessons", value: child.lessonCount, bg: "bg-tint-blue" },
     { label: "Completed", value: child.completedCount, bg: "bg-tint-green" },
     { label: "Quiz average", value: child.avgQuizPercent === null ? "None yet" : `${child.avgQuizPercent}%`, bg: "bg-tint-yellow" },
+    { label: "Game Zone stars", value: child.gameStars, bg: "bg-tint-pink" },
     { label: "Last active", value: fmtDate(child.lastActive), bg: "bg-tint-purple" },
   ];
 
@@ -57,7 +58,7 @@ export function ChildDetail({ id }: { id: string }) {
         </ul>
       </header>
 
-      <dl className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         {stats.map((s) => (
           <div key={s.label} className={`rounded-3xl ${s.bg} p-5 card-border`}>
             <dt className="text-sm font-semibold text-body">{s.label}</dt>

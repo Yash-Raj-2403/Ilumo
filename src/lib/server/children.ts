@@ -12,6 +12,7 @@ export type ChildSummary = {
   email: string;
   age: number | null;
   supports: CategorySlug[];
+  gameStars: number;
   lessonCount: number;
   completedCount: number;
   avgProgress: number;
@@ -84,7 +85,8 @@ export async function childSummary(childId: string): Promise<ChildSummary | null
   const lessons = await childLessons(childId);
   const quizzes = lessons.filter((l) => l.quiz && l.quiz.total > 0);
   const child = profile.child as { age?: number; needs?: unknown } | null;
-  const settings = profile.settings as { supports?: unknown } | null;
+  const settings = profile.settings as { supports?: unknown; gameStars?: Record<string, unknown> } | null;
+  const gameStars = Object.values(settings?.gameStars ?? {}).reduce<number>((n, v) => n + (typeof v === "number" ? Math.min(3, Math.max(0, v)) : 0), 0);
   const supports = normalizeSupports(settings?.supports).length ? normalizeSupports(settings?.supports) : normalizeSupports(child?.needs);
   return {
     id: profile.id,
@@ -92,6 +94,7 @@ export async function childSummary(childId: string): Promise<ChildSummary | null
     email: profile.email,
     age: child?.age ?? null,
     supports,
+    gameStars,
     lessonCount: lessons.length,
     completedCount: lessons.filter((l) => l.progress === 100).length,
     avgProgress: lessons.length ? Math.round(lessons.reduce((n, l) => n + l.progress, 0) / lessons.length) : 0,

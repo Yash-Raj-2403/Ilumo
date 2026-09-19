@@ -7,6 +7,8 @@ export type ChildSummary = {
   email: string;
   age: number | null;
   supports: CategorySlug[];
+  /** Total stars earned in the Game Zone. */
+  gameStars: number;
   lessonCount: number;
   completedCount: number;
   avgProgress: number;

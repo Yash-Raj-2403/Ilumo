@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { BookOpen, LayoutDashboard, LineChart, LogOut, Plus, Settings, X } from "lucide-react";
+import { BookOpen, Gamepad2, LayoutDashboard, LineChart, LogOut, Plus, Settings, X } from "lucide-react";
 import { Navbar } from "@/components/landing/navbar";
 import { AccessibilityToolbar } from "./accessibility-toolbar";
 import { useStudent } from "./student-provider";
@@ -26,7 +26,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
   const { settings, updateSettings, user, signOut, dbError } = useStudent();
   const router = useRouter();
   const parent = user.role === "parent";
-  const NAV = parent ? PARENT_NAV : STUDENT_NAV;
+  const NAV = parent ? PARENT_NAV : settings.explore ? [STUDENT_NAV[0], { href: "/student/games", label: "Game Zone", icon: Gamepad2 }, ...STUDENT_NAV.slice(1)] : STUDENT_NAV;
   // Each role has its own area; settings are shared.
   const wrongArea = parent
     ? pathname.startsWith("/student") && !pathname.startsWith("/student/settings")

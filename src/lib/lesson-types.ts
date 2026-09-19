@@ -29,7 +29,9 @@ export type Lesson = LessonContent & {
   /** Which kinds of support this lesson was adapted for (empty or missing = all of them). */
   supports?: CategorySlug[];
   /** "sample" shows the built-in diagram; "image" shows the uploaded picture. */
-  visual?: { kind: "sample" } | { kind: "image"; dataUrl: string; alt: string };
+  visual?: { kind: "sample" } | { kind: "image"; dataUrl: string; alt: string } | { kind: "emoji"; items: { e: string; label: string }[] };
+  /** Set on ready-made Explore lessons (ages 5 to 10): which topic this is. */
+  topic?: string;
 };
 
 export type QuizFeedback = {

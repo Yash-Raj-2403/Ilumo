@@ -114,12 +114,29 @@ function Learn({ lesson, hasResults, onQuiz, onResults }: { lesson: Lesson; hasR
   const toolOn = `${tool} bg-brand-deep text-white`;
   const hasVisual = lesson.visual || lesson.visualDescriptions.length > 0;
 
+  const visualSection = hasVisual && (
+
+      <section id="l-visual" aria-labelledby="l-visual-h" className="scroll-mt-28 space-y-5">
+        <h2 id="l-visual-h" className="text-3xl font-bold text-ink">Visual Information</h2>
+        <LessonVisual
+          lesson={lesson}
+          autoDescribe={settings.describeImages}
+          signal={describeSignal}
+          onDescribed={(d) => saveLesson({ ...lesson, visualDescriptions: [d, ...lesson.visualDescriptions] })}
+        />
+        {lesson.visualDescriptions.slice(1).map((v, i) => (
+          <Description key={i + 1} v={v} defaultOpen={settings.describeImages} className={hl(`visual-${i + 1}`)} onHear={() => speakOne(`visual-${i + 1}`, `${v.title}. ${v.description}`)} />
+        ))}
+      </section>
+    
+  );
+
   return (
     <article className={`space-y-10 ${focus ? "text-[1.15em]" : ""}`}>
       <header>
         <h1 className="text-4xl font-bold tracking-tight text-ink sm:text-5xl">{lesson.title}</h1>
-        <p className="mt-2 text-xl text-body">Your learning material, adapted for you.</p>
-        {lesson.source === "mock" && (
+        <p className="mt-2 text-xl text-body">{lesson.topic ? "An Explore lesson, with your support switched on." : "Your learning material, adapted for you."}</p>
+        {lesson.source === "mock" && !lesson.topic && (
           <p className="mt-2 text-sm font-semibold text-body">Sample lesson</p>
         )}
         {lesson.supports && lesson.supports.length > 0 && (
@@ -148,7 +165,7 @@ function Learn({ lesson, hasResults, onQuiz, onResults }: { lesson: Lesson; hasR
         <button type="button" aria-pressed={focus} onClick={() => updateSettings({ focusMode: !focus })} className={focus ? toolOn : toolOff}>
           <Focus className="size-4" aria-hidden /> Focus Mode
         </button>
-        {supports.includes("autism") && (
+        {(supports.includes("autism") || lesson.topic) && (
           <button type="button" aria-pressed={showCards} onClick={() => setShowCards((v) => !v)} className={showCards ? toolOn : toolOff}>
             <Layers className="size-4" aria-hidden /> Flashcards
           </button>
@@ -157,6 +174,8 @@ function Learn({ lesson, hasResults, onQuiz, onResults }: { lesson: Lesson; hasR
       <p aria-live="polite" className={describeNote ? "-mt-6 rounded-2xl bg-tint-yellow p-3 font-semibold text-ink" : "sr-only"}>{describeNote}</p>
 
       {showCards && <Flashcards lesson={lesson} />}
+
+      {lesson.topic && visualSection}
 
       <section aria-labelledby="l-summary" className={`${card} bg-tint-yellow${hl("summary")}`}>
         <h2 id="l-summary" className="text-2xl font-bold text-ink">Quick Summary</h2>
@@ -199,20 +218,7 @@ function Learn({ lesson, hasResults, onQuiz, onResults }: { lesson: Lesson; hasR
         </section>
       )}
 
-      {hasVisual && (
-        <section id="l-visual" aria-labelledby="l-visual-h" className="scroll-mt-28 space-y-5">
-          <h2 id="l-visual-h" className="text-3xl font-bold text-ink">Visual Information</h2>
-          <LessonVisual
-            lesson={lesson}
-            autoDescribe={settings.describeImages}
-            signal={describeSignal}
-            onDescribed={(d) => saveLesson({ ...lesson, visualDescriptions: [d, ...lesson.visualDescriptions] })}
-          />
-          {lesson.visualDescriptions.slice(1).map((v, i) => (
-            <Description key={i + 1} v={v} defaultOpen={settings.describeImages} className={hl(`visual-${i + 1}`)} onHear={() => speakOne(`visual-${i + 1}`, `${v.title}. ${v.description}`)} />
-          ))}
-        </section>
-      )}
+      {!lesson.topic && visualSection}
 
       <div className="flex flex-wrap gap-3 border-t-2 border-brand-deep/10 pt-8">
         <button type="button" onClick={onQuiz} className="min-h-14 rounded-full bg-brand-deep px-8 text-lg font-semibold text-white">
