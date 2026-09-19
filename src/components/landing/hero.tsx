@@ -3,7 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useReducedMotion } from "motion/react";
-import { ArrowRight, Brain, Eye, GraduationCap, Heart, Mic, Sparkles, Users, Volume2 } from "lucide-react";
+import { ArrowRight, Brain, Eye, GraduationCap, Heart, LayoutDashboard, Mic, Sparkles, Users, Volume2 } from "lucide-react";
+import { useAuthSession } from "@/lib/supabase/use-session";
+import { useMyProfile } from "@/lib/supabase/use-supports";
 import { CardBody, CardContainer, CardItem } from "@/components/ui/3d-card";
 import { SquigglyText } from "@/components/ui/squiggly-text";
 
@@ -29,6 +31,9 @@ const badges = [
 ];
 
 export function Hero() {
+  // People who are already signed in are not asked who they are again: they get their dashboard.
+  const { signedIn } = useAuthSession();
+  const { role } = useMyProfile();
   return (
     <section id="home" className="relative isolate scroll-mt-24 overflow-hidden">
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60%_50%_at_85%_20%,#ece8fb_0%,transparent_70%),radial-gradient(40%_40%_at_0%_0%,#fff1e6_0%,transparent_70%)]" />
@@ -46,21 +51,33 @@ export function Hero() {
             ILUMO is an AI-powered inclusive learning platform that adapts educational content to your needs — with
             audio, visual, speech and cognitive support. Because learning should have no limits.
           </p>
-          <div className="mt-9 flex flex-wrap gap-4">
+          <div className="mt-9 flex min-h-[4.25rem] flex-wrap gap-4">
+            {signedIn === true ? (
+              <Link
+                href={role === "parent" ? "/parent" : "/student"}
+                className="group inline-flex items-center gap-3 rounded-full bg-brand-deep px-7 py-4 text-base font-semibold text-white shadow-[0_14px_30px_rgba(37,29,107,0.3)] transition motion-safe:hover:-translate-y-0.5 hover:bg-[#1a1450]"
+              >
+                <LayoutDashboard className="size-5" aria-hidden /> Continue to my dashboard
+                <ArrowRight className="size-5 transition-transform motion-safe:group-hover:translate-x-1" aria-hidden />
+              </Link>
+            ) : signedIn === false ? (
+              <>
             <Link
-              href="/student"
-              className="group inline-flex items-center gap-3 rounded-full bg-brand-deep px-7 py-4 text-base font-semibold text-white shadow-[0_14px_30px_rgba(37,29,107,0.3)] transition motion-safe:hover:-translate-y-0.5 hover:bg-[#1a1450]"
-            >
-              <GraduationCap className="size-5" aria-hidden /> I&apos;m a Student
-              <ArrowRight className="size-5 transition-transform motion-safe:group-hover:translate-x-1" aria-hidden />
-            </Link>
-            <Link
-              href="/signup?role=parent"
-              className="group inline-flex items-center gap-3 rounded-full border-2 border-brand-deep/70 bg-white px-7 py-4 text-base font-semibold text-brand-deep transition motion-safe:hover:-translate-y-0.5 hover:bg-brand-soft"
-            >
-              <Users className="size-5" aria-hidden /> I&apos;m a Parent
-              <ArrowRight className="size-5 transition-transform motion-safe:group-hover:translate-x-1" aria-hidden />
-            </Link>
+                  href="/student"
+                  className="group inline-flex items-center gap-3 rounded-full bg-brand-deep px-7 py-4 text-base font-semibold text-white shadow-[0_14px_30px_rgba(37,29,107,0.3)] transition motion-safe:hover:-translate-y-0.5 hover:bg-[#1a1450]"
+                >
+                  <GraduationCap className="size-5" aria-hidden /> I&apos;m a Student
+                  <ArrowRight className="size-5 transition-transform motion-safe:group-hover:translate-x-1" aria-hidden />
+                </Link>
+                <Link
+                  href="/signup?role=parent"
+                  className="group inline-flex items-center gap-3 rounded-full border-2 border-brand-deep/70 bg-white px-7 py-4 text-base font-semibold text-brand-deep transition motion-safe:hover:-translate-y-0.5 hover:bg-brand-soft"
+                >
+                  <Users className="size-5" aria-hidden /> I&apos;m a Parent
+                  <ArrowRight className="size-5 transition-transform motion-safe:group-hover:translate-x-1" aria-hidden />
+                </Link>
+              </>
+            ) : null}
           </div>
           <p className="mt-10 inline-flex items-center gap-2 font-hand text-2xl text-ink/80">
             <span className="relative">

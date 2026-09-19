@@ -41,8 +41,22 @@ const spoken = (b: Block) => (b.kind === "image" ? `Image description. ${b.text}
 
 export function BlindLowVisionSupport() {
   const { lessons } = useStudent();
-  const voice = useVoiceMode(); // one microphone session that carries from the list into the reader
+  const voice = useVoiceMode();
   const [doc, setDoc] = useState<Doc | null>(null);
+
+  // As soon as someone arrives, ILUMO asks how it can help, then opens the microphone by itself.
+  const greeted = useRef(false);
+  useEffect(() => {
+    if (greeted.current) return;
+    greeted.current = true;
+    const titles = ["the sample lesson, Photosynthesis", ...lessons.map((l) => l.title)];
+    voice.greet(
+      voice.supported
+        ? `Hello! I'm ILUMO. How can I help you today? You can ask me to read something. For example: ${titles.slice(0, 3).join(", or ")}. Or say help to hear everything I can do. Press the space bar any time to talk to me.`
+        : "Hello! I'm ILUMO. Voice commands aren't available in this browser, but everything on this page works with the keyboard.",
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   if (doc) return <Reader key={doc.title} doc={doc} voice={voice} onExit={() => setDoc(null)} />;
   return <Source lessons={lessons} voice={voice} onLoad={setDoc} />;
 }
@@ -75,15 +89,6 @@ function Source({ lessons, voice, onLoad }: { lessons: Lesson[]; voice: Voice; o
     });
     return () => voice.setHandler(null);
   }, [voice, choices, options, onLoad]);
-
-  // When voice mode is on, say what's available.
-  const announced = useRef(false);
-  useEffect(() => {
-    if (voice.on && !announced.current) {
-      announced.current = true;
-      voice.say(`Voice mode is on. You can read: ${options}. Say the name or the number.`);
-    }
-  }, [voice, options]);
 
   const [file, setFile] = useState<File | null>(null);
   const [pasted, setPasted] = useState("");
@@ -236,17 +241,39 @@ function Reader({ doc, voice, onExit }: { doc: Doc; voice: Voice; onExit: () => 
   useEffect(() => {
     if (started.current || !speechAvailable) return;
     started.current = true;
-    const hint = voice.on ? "I'm listening. Say help to hear what I can do." : "Say or press Play to control reading.";
+    const hint = "Press the space bar any time to talk to me.";
     if (!autoRead) return;
-    voice.say(`${doc.title}. ${items.length} parts. ${hint}`, () => playQueue(items, 0));
+    voice.say(`${doc.title}. ${items.length} parts. ${hint}`, () => playQueue(items, 0), undefined, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [speechAvailable]);
 
   // Everything the student can say while reading.
-  const latest = useRef({ current, status: speech.status, rate: settings.speechRate });
+  const latest = useRef({ current, status: speech.status, rate: settings.speechRate, speaking: speech.currentId });
   useEffect(() => {
-    latest.current = { current, status: speech.status, rate: settings.speechRate };
+    latest.current = { current, status: speech.status, rate: settings.speechRate, speaking: speech.currentId };
   });
+
+  // Talking opens the microphone. Reading pauses meanwhile, and picks up again if nothing is said.
+  const pausedForTalk = useRef(false);
+  useEffect(() => {
+    voice.setHooks({
+      onOpen: () => {
+        const { status, speaking } = latest.current;
+        if (status === "playing" && speaking !== "voice") {
+          pauseQueue();
+          pausedForTalk.current = true;
+        } else if (speaking === "voice") stopQueue();
+      },
+      onHeard: () => { pausedForTalk.current = false; },
+      onNoVoice: () => {
+        if (!pausedForTalk.current) return false;
+        pausedForTalk.current = false;
+        resumeQueue();
+        return true;
+      },
+    });
+    return () => voice.setHooks({});
+  }, [voice, pauseQueue, resumeQueue, stopQueue]);
   useEffect(() => {
     const idx = () => (latest.current.current >= 0 ? latest.current.current : lastIdx.current);
     const play = (i: number) => playQueue(items, Math.max(0, Math.min(items.length - 1, i)));
@@ -254,7 +281,7 @@ function Reader({ doc, voice, onExit }: { doc: Doc; voice: Voice; onExit: () => 
 
     async function askTutor(mode: "explain" | "question" | "summary", text: string) {
       const here = idx();
-      voice.say("One moment.");
+      voice.say("One moment.", undefined, undefined, false);
       try {
         const res = await authedFetch("/api/voice/ask", {
           method: "POST",
@@ -273,9 +300,9 @@ function Reader({ doc, voice, onExit }: { doc: Doc; voice: Voice; onExit: () => 
         voice.say(data.answer, undefined, `${data.answer} Say continue to keep reading, or ask me more.`);
       } catch {
         // The AI isn't reachable: fall back to the material itself.
-        if (mode === "explain") return voice.say("I couldn't put that in other words just now, so I'll read that part again.", () => play(here));
+        if (mode === "explain") return voice.say("I couldn't put that in other words just now, so I'll read that part again.", () => play(here), undefined, false);
         const hit = findBestBlock(text, blocks);
-        if (hit) return voice.say("I couldn't ask the AI just now. Here's the closest part of the material.", () => play(blocks.indexOf(hit)));
+        if (hit) return voice.say("I couldn't ask the AI just now. Here's the closest part of the material.", () => play(blocks.indexOf(hit)), undefined, false);
         voice.say("Sorry, I couldn't find that in the material.");
       }
     }
@@ -335,7 +362,7 @@ function Reader({ doc, voice, onExit }: { doc: Doc; voice: Voice; onExit: () => 
           voice.say("Opening the print window for large print.");
           return brailleActions.current?.printLarge();
         case "exit":
-          voice.say("Going back to your list.");
+          voice.say("Back to your list. What would you like to read?");
           return onExit();
         case "explain":
           return askTutor("explain", text);

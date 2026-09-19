@@ -60,17 +60,20 @@ export function IntroScreen() {
     return () => timers.forEach(clearTimeout);
   }, [reduced]);
 
-  // Keep the page behind inert and unscrollable while the intro is up.
+  // Keep the page behind the intro inert and unscrollable while it is up. The intro itself sits
+  // inside #app-root, so only its siblings are made inert (inerting the whole root would also
+  // disable the "Skip intro" button).
   useEffect(() => {
     if (!visible) return;
-    const root = document.getElementById("app-root");
-    root?.setAttribute("inert", "");
+    const intro = document.getElementById("ilumo-intro");
+    const siblings = intro ? [...(intro.parentElement?.children ?? [])].filter((c) => c !== intro) : [];
+    siblings.forEach((c) => c.setAttribute("inert", ""));
     const prev = document.documentElement.style.overflow;
     document.documentElement.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && finish();
     window.addEventListener("keydown", onKey);
     return () => {
-      root?.removeAttribute("inert");
+      siblings.forEach((c) => c.removeAttribute("inert"));
       document.documentElement.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };

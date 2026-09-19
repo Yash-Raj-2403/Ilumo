@@ -209,3 +209,35 @@ ${input.history.length ? `RECENT CONVERSATION:\n${input.history.map((h) => `Stud
   if (!answer) throw new Error("empty answer");
   return answer.slice(0, 1200);
 }
+
+// ---- Captions for audio and video -------------------------------------------------------------
+const CAPTION_INSTRUCTION = `You write captions for a deaf or hard-of-hearing student, from an audio or video recording.
+
+Rules:
+- Caption ALL speech word for word, in order. Do not summarise, translate or correct it. Fix only obvious punctuation.
+- Make each caption a short phrase or sentence: at most about 80 characters and about 6 seconds long.
+- start and end are in seconds from the very beginning of the recording. Be as accurate as you can.
+- If you can tell speakers apart, begin the caption with the speaker's role or name and a colon, for example "Teacher:".
+- Describe meaningful non-speech sounds in square brackets with kind "sound", for example [Bell rings], [Applause], [Door slams], [Music plays]. Skip background noise that does not matter.
+- If a word is unclear write [unclear]. Never invent words.
+Also give a two-sentence plain-language summary and up to five key points, written for a reader who may find long sentences hard.
+Return ONLY valid JSON in the requested schema.`;
+
+const CAPTION_SCHEMA = obj({
+  segments: arr(obj({ start: { type: Type.NUMBER }, end: { type: Type.NUMBER }, text: S, kind: S })),
+  summary: S,
+  keyPoints: arr(S),
+});
+
+export async function captionMedia(mimeType: string, base64: string) {
+  const raw = (await generateJson(
+    [{ text: "Caption this recording." }, { inlineData: { mimeType, data: base64 } }],
+    CAPTION_SCHEMA,
+    CAPTION_INSTRUCTION,
+  )) as { segments?: unknown; summary?: string; keyPoints?: string[] };
+  return {
+    segments: raw.segments ?? [],
+    summary: (raw.summary ?? "").trim().slice(0, 1200),
+    keyPoints: (raw.keyPoints ?? []).map((k) => String(k).trim()).filter(Boolean).slice(0, 6),
+  };
+}

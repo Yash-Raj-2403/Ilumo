@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { DeafHohSupport } from "@/components/student/support/deaf-hoh-support";
 import { BlindLowVisionSupport } from "@/components/student/support/blind-low-vision-support";
 import { AutismSupport } from "@/components/student/support/autism-support";
 import { SupportGate } from "@/components/student/support/support-gate";
@@ -10,6 +11,7 @@ import { findCategory, type CategorySlug } from "@/lib/categories";
 const EXPERIENCES: Partial<Record<CategorySlug, () => React.ReactNode>> = {
   autism: () => <AutismSupport />,
   "blind-low-vision": () => <BlindLowVisionSupport />,
+  "deaf-hoh": () => <DeafHohSupport />,
 };
 
 export default async function SupportPage({ params }: { params: Promise<{ category: string }> }) {

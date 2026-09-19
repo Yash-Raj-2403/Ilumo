@@ -21,6 +21,10 @@ export type Settings = {
   supports: CategorySlug[] | null;
   /** Text-to-speech speed, 0.75 to 2. */
   speechRate: number;
+  /** How captions look (size and colours). */
+  captions: { size: "m" | "l" | "xl" | "xxl"; theme: "dark" | "light" | "yellow" };
+  /** A sign-language video someone attached to a lesson: lesson id -> web address. */
+  signVideos: Record<string, string>;
 };
 export type Progress = {
   sectionsRead: number[];
@@ -65,7 +69,7 @@ type Ctx = {
   resumeQueue: () => void;
   stopQueue: () => void;
   /** Speak one piece of text (e.g. "Hear description"). */
-  speakOne: (id: string, text: string, onEnd?: () => void) => void;
+  speakOne: (id: string, text: string, onEnd?: () => void, onFail?: () => void) => void;
 };
 
 const StudentContext = createContext<Ctx | null>(null);
@@ -85,6 +89,8 @@ function defaultSettings(p: StudentProfile): Settings {
     keyboardHints: p.accessibilityProfile.keyboardNavigation,
     supports: null,
     speechRate: 1,
+    captions: { size: "l", theme: "dark" },
+    signVideos: {},
   };
 }
 
@@ -328,7 +334,7 @@ export function StudentProvider({ children }: { children: React.ReactNode }) {
     setSpeech((s) => (s.status === "paused" ? { ...s, status: "playing" } : s));
   }, []);
 
-  const speakOne = useCallback((id: string, text: string, onEnd?: () => void) => {
+  const speakOne = useCallback((id: string, text: string, onEnd?: () => void, onFail?: () => void) => {
     stopSpeech();
     const run = ++runId.current;
     setSpeech({ status: "playing", currentId: id });
@@ -337,7 +343,12 @@ export function StudentProvider({ children }: { children: React.ReactNode }) {
       setSpeech({ status: "idle", currentId: null });
       onEnd?.();
     };
-    speakText(text, { rate: rateRef.current, onEnd: done, onError: done });
+    const failed = () => {
+      if (run !== runId.current) return;
+      setSpeech({ status: "idle", currentId: null });
+      onFail?.(); // e.g. the browser refused to speak before the page was touched
+    };
+    speakText(text, { rate: rateRef.current, onEnd: done, onError: failed });
   }, []);
 
   const registerReadables = useCallback((items: ReadItem[] | null) => {

@@ -34,6 +34,8 @@ export type Listener = {
  */
 export function listen(opts: {
   onHeard: (text: string) => void;
+  /** Words still being spoken (not final yet). Passing this turns on live, as-you-speak text. */
+  onInterim?: (text: string) => void;
   onError: (kind: "denied" | "network" | "unavailable") => void;
   onState?: (listening: boolean) => void;
 }): Listener {
@@ -45,17 +47,21 @@ export function listen(opts: {
   let wanted = true;
   const rec = new Ctor();
   rec.continuous = true;
-  rec.interimResults = false;
+  rec.interimResults = !!opts.onInterim;
   rec.lang = navigator.language || "en-US";
 
   rec.onresult = (e) => {
+    let interim = "";
     for (let i = e.resultIndex; i < e.results.length; i++) {
       const r = e.results[i];
       if (r.isFinal) {
         const text = r[0].transcript.trim();
         if (text) opts.onHeard(text);
+      } else {
+        interim += r[0].transcript;
       }
     }
+    opts.onInterim?.(interim.trim());
   };
   rec.onerror = (e) => {
     if (e.error === "not-allowed" || e.error === "service-not-allowed") {

@@ -1,0 +1,56 @@
+{
+ "title": "Photosynthesis (sample talk)",
+ "src": "/samples/photosynthesis-talk.webm",
+ "duration": 25.73,
+ "segments": [
+  {
+   "start": 0.0,
+   "end": 0.8,
+   "text": "[Bell rings]",
+   "kind": "sound"
+  },
+  {
+   "start": 1.2,
+   "end": 4.37,
+   "text": "Plants make their own food using sunlight.",
+   "kind": "speech"
+  },
+  {
+   "start": 4.77,
+   "end": 7.84,
+   "text": "This process is called photosynthesis.",
+   "kind": "speech"
+  },
+  {
+   "start": 8.24,
+   "end": 11.69,
+   "text": "Leaves take in carbon dioxide from the air.",
+   "kind": "speech"
+  },
+  {
+   "start": 12.09,
+   "end": 14.76,
+   "text": "Roots take in water from the soil.",
+   "kind": "speech"
+  },
+  {
+   "start": 15.16,
+   "end": 20.17,
+   "text": "Using the sunlight, the plant turns them into sugar and oxygen.",
+   "kind": "speech"
+  },
+  {
+   "start": 20.57,
+   "end": 25.33,
+   "text": "The sugar feeds the plant, and the oxygen goes back into the air.",
+   "kind": "speech"
+  }
+ ],
+ "summary": "A short talk explaining that plants make their own food from sunlight, using carbon dioxide from the air and water from the soil, and that they release oxygen.",
+ "keyPoints": [
+  "Plants make their own food using sunlight.",
+  "This process is called photosynthesis.",
+  "Leaves take in carbon dioxide and roots take in water.",
+  "The plant makes sugar and releases oxygen."
+ ]
+}
