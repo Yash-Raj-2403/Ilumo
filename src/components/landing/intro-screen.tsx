@@ -2,10 +2,17 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Sparkles } from "lucide-react";
+import Image from "next/image";
 import { MaskContainer } from "@/components/ui/svg-mask-effect";
 import { EncryptedText } from "@/components/ui/encrypted-text";
 
+const LETTERS = [
+  { char: "I", color: "#207dc0" },
+  { char: "L", color: "#ffb434" },
+  { char: "U", color: "#fd806c" },
+  { char: "M", color: "#58b98e" },
+  { char: "O", color: "#8577d4" },
+];
 const MESSAGE = "Every mind learns in a unique way.";
 // Hard ceiling: the intro starts leaving after EXIT_MS no matter what.
 const EXIT_MS = 2500;
@@ -96,17 +103,29 @@ export function IntroScreen() {
             }
           >
             <div className="flex flex-col items-center px-6">
-              <motion.span {...r(0.35)} aria-hidden className="text-[#f5b542]">
-                <Sparkles className="size-7" />
+              <motion.span {...r(0.35)} aria-hidden>
+                <Image
+                  src="/images/ilumo-star.png"
+                  alt=""
+                  width={256}
+                  height={256}
+                  priority
+                  className="size-24 sm:size-28"
+                />
               </motion.span>
               <motion.p {...r(0.5)} className="mt-3 text-xl font-medium text-body sm:text-2xl">
                 Welcome to
               </motion.p>
               <motion.h1
                 {...r(0.7)}
-                className="text-[4.5rem] font-extrabold leading-none tracking-tight text-brand-deep sm:text-[7rem]"
+                aria-label="ILUMO"
+                className="text-[4.5rem] font-extrabold leading-none tracking-tight sm:text-[7rem]"
               >
-                ILUMO
+                {LETTERS.map((l) => (
+                  <span key={l.char} aria-hidden style={{ color: l.color }}>
+                    {l.char}
+                  </span>
+                ))}
               </motion.h1>
               <motion.p {...r(0.9)} className="mt-2 text-lg font-semibold text-brand sm:text-2xl">
                 See the Ability
