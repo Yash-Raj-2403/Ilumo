@@ -13,11 +13,14 @@ export type Session = { close: () => void };
 
 export async function openListeningWindow(opts: {
   onFrame: (f: Frame) => void;
+  /** Words as they are being spoken, before the phrase is finished. */
+  onInterim?: (text: string) => void;
   onText: (text: string) => void;
   onEnd: (reason: EndReason) => void;
 }): Promise<Session> {
   let ended = false;
   let voiceSeen = false;
+  let soundSeen = false; // any sound above room level, in case a quiet voice never passed the strict test
   let lastVoiceAt = 0;
   const openedAt = Date.now();
   let detector: Detector | null = null;
@@ -34,7 +37,8 @@ export async function openListeningWindow(opts: {
 
   const watch = setInterval(() => {
     const now = Date.now();
-    if (!voiceSeen && now - openedAt >= NO_VOICE_MS) end("silence"); // nobody spoke: mic off
+    if (!voiceSeen && !soundSeen && now - openedAt >= NO_VOICE_MS) end("silence"); // nobody spoke: mic off
+    else if (!voiceSeen && now - openedAt >= NO_VOICE_MS + 2000) end("silence"); // only faint sound, and no words came
     else if (voiceSeen && now - lastVoiceAt >= AFTER_VOICE_MS) end("silence");
     else if (now - openedAt >= MAX_MS) end("silence");
   }, 100);
@@ -45,6 +49,7 @@ export async function openListeningWindow(opts: {
         voiceSeen = true;
         lastVoiceAt = Date.now();
       }
+      if (f.level >= 2) soundSeen = true;
       opts.onFrame(f);
     });
   } catch {
@@ -57,10 +62,17 @@ export async function openListeningWindow(opts: {
   }
 
   recognizer = listen({
+    onInterim: (t) => {
+      if (t && (voiceSeen || soundSeen)) {
+        voiceSeen = true; // words are coming out, so this is a person talking
+        lastVoiceAt = Date.now(); // and keep listening while they do
+        opts.onInterim?.(t);
+      }
+    },
     onHeard: (text) => {
       // Words that arrive without a real voice ever being heard (background TV, far-away chat)
       // are ignored.
-      if (!voiceSeen) return;
+      if (!voiceSeen && !soundSeen) return;
       opts.onText(text);
       end("text");
     },

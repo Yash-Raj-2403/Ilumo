@@ -7,6 +7,8 @@ import { recognitionSupported } from "@/lib/voice/recognition";
 import { openListeningWindow, type Session } from "@/lib/voice/session";
 import { stopSpeech } from "@/lib/speech";
 import { matchSpoken } from "./spoken-answer";
+import { Confetti } from "./confetti";
+import { liveStreak, recordPlay } from "./streak";
 import { findGame } from "./catalog";
 import { BUILDERS, type Choice } from "./rounds";
 import { playGameSound, playWin } from "./sounds";
@@ -14,11 +16,11 @@ import { useStudent } from "../student-provider";
 
 const starsFor = (mistakes: number) => (mistakes === 0 ? 3 : mistakes <= 2 ? 2 : 1);
 
-function Stars({ n, size = "size-9" }: { n: number; size?: string }) {
+function Stars({ n, size = "size-9", pop = false }: { n: number; size?: string; pop?: boolean }) {
   return (
     <span role="img" aria-label={`${n} out of 3 stars`} className="inline-flex gap-1">
       {[1, 2, 3].map((i) => (
-        <Star key={i} aria-hidden className={`${size} ${i <= n ? "fill-[#ffb434] text-[#e39a10]" : "text-body/40"}`} />
+        <Star key={i} aria-hidden style={pop ? { animationDelay: `${i * 0.25}s` } : undefined} className={`${size} ${pop ? "star-pop" : ""} ${i <= n ? "fill-[#ffb434] text-[#e39a10]" : "text-body/40"}`} />
       ))}
     </span>
   );
@@ -39,6 +41,7 @@ export function GamePlayer({ id }: { id: string }) {
   const [mistakes, setMistakes] = useState(0);
   const [note, setNote] = useState("");
   const [caption, setCaption] = useState("");
+  const [burst, setBurst] = useState(0);
   const [mic, setMic] = useState<"off" | "listening" | "hearing">("off");
   const [said, setSaid] = useState<string | null>(null);
   const [micNote, setMicNote] = useState("");
@@ -121,6 +124,7 @@ export function GamePlayer({ id }: { id: string }) {
       setSolved(true);
       setNote(round.praise);
       playWin();
+      setBurst((b) => b + 1);
       say(round.praise);
       setTimeout(() => nextRef.current?.focus(), 50);
     } else {
@@ -150,7 +154,11 @@ export function GamePlayer({ id }: { id: string }) {
   function next() {
     if (idx + 1 >= rounds.length) {
       const s = starsFor(mistakes);
-      if ((settings.gameStars[id] ?? 0) < s) updateSettings({ gameStars: { ...settings.gameStars, [id]: s } });
+      updateSettings({
+        gameStars: (settings.gameStars[id] ?? 0) < s ? { ...settings.gameStars, [id]: s } : settings.gameStars,
+        gameStreak: recordPlay(settings.gameStreak, id),
+      });
+      setBurst((b) => b + 1);
       setStage("done");
       setNote("");
       return;
@@ -215,9 +223,13 @@ export function GamePlayer({ id }: { id: string }) {
     return (
       <div className="space-y-6">
         {back}
-        <section role="status" className="rounded-3xl bg-tint-yellow p-8 text-center card-border">
+        <section role="status" className="relative overflow-hidden rounded-3xl bg-tint-yellow p-8 text-center card-border">
+          <Confetti burst={burst} count={s === 3 ? 60 : 30} />
           <h1 className="text-4xl font-bold text-ink">All done! <span aria-hidden>🎉</span></h1>
-          <p className="mt-4 flex justify-center"><Stars n={s} size="size-14" /></p>
+          <p className="mt-4 flex justify-center"><Stars n={s} size="size-14" pop /></p>
+          {liveStreak(settings.gameStreak) > 0 && (
+            <p className="mt-3 text-2xl font-bold text-ink"><span aria-hidden>🔥 </span>{liveStreak(settings.gameStreak)} {liveStreak(settings.gameStreak) === 1 ? "day" : "days"} in a row!</p>
+          )}
           <p className="mt-3 text-2xl text-ink">
             {s === 3 ? "Perfect! No mistakes." : s === 2 ? "Well done! Just a couple of tries." : "Good practice! Every try helps you learn."}
           </p>
@@ -236,7 +248,8 @@ export function GamePlayer({ id }: { id: string }) {
         {back}
         <p className="text-lg font-bold text-ink" aria-live="polite">Question {idx + 1} of {rounds.length}</p>
       </div>
-      <section className="space-y-6 rounded-3xl bg-white p-6 card-border sm:p-8" aria-labelledby="g-q">
+      <section className="relative space-y-6 overflow-hidden rounded-3xl bg-white p-6 card-border sm:p-8" aria-labelledby="g-q">
+        <Confetti burst={burst} />
         <h1 id="g-q" ref={headRef} tabIndex={-1} className="text-3xl font-bold leading-snug text-ink outline-none sm:text-4xl">{round.prompt}</h1>
         {round.picture && (
           <div className={`rounded-3xl ${game.card} p-6 text-center`}>
@@ -288,7 +301,7 @@ export function GamePlayer({ id }: { id: string }) {
                   disabled={solved && !c.ok}
                   aria-disabled={isWrong}
                   className={`flex min-h-28 w-full flex-col items-center justify-center gap-1 rounded-3xl p-4 text-3xl font-bold text-ink ring-2 focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-4 focus-visible:outline-brand ${
-                    isRight ? "bg-tint-green ring-[#1b7a3a]" : isWrong ? "bg-tint-pink opacity-70 ring-black/30" : "bg-white ring-brand-deep/30 hover:bg-brand-soft"
+                    isRight ? "bg-tint-green ring-[#1b7a3a]" : isWrong ? "wobble bg-tint-pink opacity-70 ring-black/30" : "bg-white ring-brand-deep/30 hover:bg-brand-soft"
                   }`}
                 >
                   <span className="sr-only">Choice {i + 1}: </span>

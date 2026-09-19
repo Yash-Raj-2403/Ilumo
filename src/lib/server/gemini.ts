@@ -190,21 +190,30 @@ export async function ocrMaterial(mimeType: string, base64: string): Promise<Rea
 }
 
 // ---- Voice tutor ------------------------------------------------------------------------------
-const TUTOR_INSTRUCTION = `You are ILUMO's voice tutor, talking with a blind or low-vision student who is listening to their learning material.
+const TUTOR_INSTRUCTION = `You are a warm, clear voice tutor for a blind or low-vision student. Your answer is read aloud by a speech voice, so write only for the ear.
 
-Your answer will be spoken aloud, so:
-- Use plain, warm, short sentences. At most five sentences.
-- No lists, no markdown, no symbols, no emojis, no "as an AI".
-- Base everything on the material provided. If it does not cover the question, say so briefly, then offer the closest related idea from the material.
-- If asked to explain or simplify, restate the current passage in simpler words, using one everyday comparison if it helps. Add no new facts.
-- If asked for a summary, give the main ideas in three sentences.
-Return ONLY JSON: {"answer": "..."}.`;
+How to answer:
+- Answer exactly what the student asked, and start with the answer itself. Do not begin with "Sure", "Great question" or a repeat of the question.
+- The student's own lesson is provided. First decide whether the lesson itself contains what is needed to answer. Set "inMaterial" to true only if it does. Sharing one keyword is not enough.
+- If inMaterial is true, answer from the lesson: use its facts and its wording, made simpler if needed. You may add a short everyday comparison, but no outside facts, and never claim the lesson says something it does not.
+- If inMaterial is false, answer with accurate general knowledge. Do not mention or hint at the lesson yourself in the answer, because the app adds that. If you are not sure of a fact, say so instead of guessing.
+- Match the student's age and level: use words and comparisons that suit them, and one everyday example when it helps.
+- Everything must make sense without seeing anything. Never say "look at", "see the picture" or "as shown". When a shape, colour, position or diagram helps, describe it in words.
+- Spoken style: short, plain sentences. No lists, no bullet points, no markdown, no symbols, no emojis, no brackets. Write numbers and units the way they are said aloud. Do not say you are an AI.
 
-const TUTOR_SCHEMA = obj({ answer: S });
+How long:
+- topic (the student named a subject to be explained): a proper explanation in five to eight sentences. Say what it is, how it works or why it matters, and give one example. Finish with one short sentence offering to go deeper.
+- question: two to five sentences.
+- explain (the student did not follow the passage they are on): restate that passage in simpler words in two to four sentences, with one everyday comparison. Add no new facts.
+- summary: the main ideas in three sentences.
+Return ONLY JSON: {"inMaterial": true or false, "answer": "..."}.`;
+
+const TUTOR_SCHEMA = obj({ inMaterial: { type: Type.BOOLEAN }, answer: S });
 
 export async function askTutor(input: {
   question: string;
-  mode: "explain" | "question" | "summary";
+  mode: "explain" | "question" | "summary" | "topic";
+  age?: number;
   title: string;
   material: string;
   current: string;
@@ -213,16 +222,22 @@ export async function askTutor(input: {
   const prompt = `MATERIAL TITLE: ${input.title}
 
 FULL MATERIAL:
-${input.material.slice(0, 12000)}
+${input.material.trim() ? input.material.slice(0, 12000) : "(The student has not opened any material yet. Answer from general knowledge and do not mention their material.)"}
 
 PASSAGE THE STUDENT IS ON NOW:
 ${input.current.slice(0, 2000)}
 
+STUDENT: about ${input.age ?? 14} years old.
+
 ${input.history.length ? `RECENT CONVERSATION:\n${input.history.map((h) => `Student: ${h.q}\nTutor: ${h.a}`).join("\n")}\n\n` : ""}TASK (${input.mode}): the student said: "${input.question.slice(0, 500)}"`;
-  const raw = (await generateJson([{ text: prompt }], TUTOR_SCHEMA, TUTOR_INSTRUCTION)) as { answer?: string };
+  const raw = (await generateJson([{ text: prompt }], TUTOR_SCHEMA, TUTOR_INSTRUCTION)) as { answer?: string; inMaterial?: boolean };
   const answer = (raw.answer ?? "").replace(/[*_#`>]/g, "").trim();
   if (!answer) throw new Error("empty answer");
-  return answer.slice(0, 1200);
+  // Say clearly where the answer comes from, so a general answer is never mistaken for the lesson.
+  const hasLesson = input.material.trim().length > 0;
+  const asksAboutLesson = input.mode === "question" || input.mode === "topic";
+  const source = !hasLesson || !asksAboutLesson ? "" : raw.inMaterial ? "From this lesson: " : "That isn't covered in this lesson, but here is a general answer. ";
+  return (source + answer).slice(0, 1900);
 }
 
 // ---- Captions for audio and video -------------------------------------------------------------

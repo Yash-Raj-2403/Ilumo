@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Eye, Focus, Layers, Volume2 } from "lucide-react";
 import type { Lesson, QuizFeedback } from "@/lib/lesson-types";
 import { CATEGORIES } from "@/lib/categories";
+import { findTopic } from "@/data/explore";
 import { authedFetch } from "@/lib/supabase/authed-fetch";
 import { ReadAloudControls } from "./accessibility-controls";
 import { FlashcardQuiz } from "./flashcard-quiz";
@@ -133,7 +134,8 @@ function Learn({ lesson, hasResults, onQuiz, onResults }: { lesson: Lesson; hasR
 
   return (
     <article className={`space-y-10 ${focus ? "text-[1.15em]" : ""}`}>
-      <header>
+      <header className={lesson.topic ? `rounded-3xl ${findTopic(lesson.topic)?.card ?? "bg-tint-yellow"} p-6 card-border sm:p-8` : undefined}>
+        {lesson.topic && <span aria-hidden className="mb-2 block text-6xl leading-none">{findTopic(lesson.topic)?.emoji}</span>}
         <h1 className="text-4xl font-bold tracking-tight text-ink sm:text-5xl">{lesson.title}</h1>
         <p className="mt-2 text-xl text-body">{lesson.topic ? "An Explore lesson, with your support switched on." : "Your learning material, adapted for you."}</p>
         {lesson.source === "mock" && !lesson.topic && (

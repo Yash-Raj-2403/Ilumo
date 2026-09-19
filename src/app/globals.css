@@ -65,6 +65,36 @@ html:not([data-contrast="high"]) .calm-theme {
 }
 .calm-theme *, .calm-theme *::before, .calm-theme *::after { animation: none !important; transition: none !important; }
 
+/* Kids look: brighter colours and chunky outlines for the Game Zone age group. High contrast and the calm theme still win. */
+html[data-kids="on"]:not([data-contrast="high"]) {
+  --color-canvas: #fff9ec;
+  --color-brand: #5237e8;
+  --color-brand-soft: #e6dfff;
+  --color-tint-pink: #ffd9e2;
+  --color-tint-blue: #d3e8ff;
+  --color-tint-green: #d2f4d4;
+  --color-tint-purple: #e5daff;
+  --color-tint-yellow: #ffefb3;
+  --subject-language: #bfeee6;
+  --subject-math: #ffb3ae;
+  --subject-science: #a8e4ff;
+  --subject-life: #ffdcbf;
+  --subject-independence: #b0dfe3;
+}
+html[data-kids="on"]:not([data-contrast="high"]) .card-border { border: 3px solid var(--color-brand-deep); box-shadow: 0 5px 0 var(--color-brand-deep); }
+/* Every page inside the student area gets the same chunky look, including support pages that don't use .card-border. */
+html[data-kids="on"]:not([data-contrast="high"]) main [class*="rounded-3xl"]:not(.card-border):not(.calm-theme):not([class*="bg-transparent"]):not(.reading-highlight) { border: 3px solid var(--color-brand-deep); box-shadow: 0 5px 0 var(--color-brand-deep); }
+html[data-kids="on"]:not([data-contrast="high"]) main [class*="rounded-2xl"]:not(.card-border):not(input):not(textarea):not(select):not([class*="ring-"]) { border: 2px solid var(--color-brand-deep); }
+html[data-kids="on"]:not([data-contrast="high"]) main [class*="rounded-full"][class*="bg-brand-soft"] { border: 2px solid var(--color-brand-deep); }
+html[data-kids="on"]:not([data-contrast="high"]) .kids-bg {
+  background-image: radial-gradient(circle at 8% 12%, #ffe1ea 0 9rem, transparent 9.1rem), radial-gradient(circle at 92% 6%, #d6ecff 0 10rem, transparent 10.1rem), radial-gradient(circle at 88% 92%, #d8f5d9 0 9rem, transparent 9.1rem);
+  background-attachment: fixed;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html[data-kids="on"]:not([data-contrast="high"]) a.card-border, html[data-kids="on"]:not([data-contrast="high"]) button.card-border { transition: transform 0.15s ease; }
+  html[data-kids="on"]:not([data-contrast="high"]) a.card-border:hover, html[data-kids="on"]:not([data-contrast="high"]) button.card-border:hover { transform: translateY(-3px) rotate(-0.4deg); }
+}
+
 .card-border { border: 1px solid rgb(37 29 107 / 0.08); box-shadow: 0 8px 28px rgb(60 40 120 / 0.06); }
 html[data-contrast="high"] .card-border { border: 2px solid #000; box-shadow: none; }
 html[data-keys="on"] :focus-visible { outline-width: 4px; outline-offset: 4px; outline-color: #d9480f; }
@@ -116,3 +146,25 @@ body {
 .dwelling { position: relative; overflow: hidden; }
 .dwelling::after { content: ""; position: absolute; left: 0; bottom: 0; height: 10px; background: #d9480f; animation: dwell var(--dwell-ms, 1500ms) linear forwards; }
 @keyframes dwell { from { width: 0; } to { width: 100%; } }
+
+/* Celebrations. Everything here only moves when the person has not asked for reduced motion. */
+.confetti, .star-pop, .wobble { animation: none; }
+.confetti { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .confetti { display: block; position: absolute; top: 0; width: 0.7rem; height: 1.1rem; border-radius: 0.2rem; opacity: 0; animation: confetti-fall 1.3s ease-out forwards; }
+  .star-pop { animation: star-pop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
+  .wobble { animation: wobble 0.45s ease-in-out; }
+}
+@keyframes confetti-fall {
+  0% { opacity: 1; transform: translate(0, -10px) rotate(0deg); }
+  100% { opacity: 0; transform: translate(var(--dx, 0px), 260px) rotate(var(--rot, 360deg)); }
+}
+@keyframes star-pop {
+  0% { transform: scale(0) rotate(-40deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+@keyframes wobble {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-2.5deg) translateX(-3px); }
+  75% { transform: rotate(2.5deg) translateX(3px); }
+}

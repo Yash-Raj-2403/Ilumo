@@ -14,9 +14,12 @@ import { updateChild, updateName } from "@/lib/supabase/data";
 
 type Status = { kind: "ok" | "error"; text: string } | null;
 
+// Each settings group has its own soft colour, so children can tell them apart.
+const TINT: Record<string, string> = { profile: "bg-tint-blue", support: "bg-tint-purple", explore: "bg-tint-yellow", password: "bg-tint-pink", display: "bg-tint-green" };
+
 function Section({ id, title, intro, children }: { id: string; title: string; intro?: string; children: React.ReactNode }) {
   return (
-    <section id={id} aria-labelledby={`${id}-h`} className="scroll-mt-28 space-y-5 rounded-3xl bg-white p-6 card-border sm:p-8">
+    <section id={id} aria-labelledby={`${id}-h`} className={`scroll-mt-28 space-y-5 rounded-3xl ${TINT[id] ?? "bg-white"} p-6 card-border sm:p-8`}>
       <div>
         <h2 id={`${id}-h`} className="text-2xl font-bold text-ink">{title}</h2>
         {intro && <p className="mt-1 text-lg text-body">{intro}</p>}

@@ -1,5 +1,6 @@
 "use client";
 
+import { findTopic } from "@/data/explore";
 import Link from "next/link";
 import { Eye } from "lucide-react";
 import type { Lesson } from "@/lib/lesson-types";
@@ -30,7 +31,7 @@ export function LessonCard({ lesson }: { lesson: Lesson }) {
   const { lessonProgress } = useStudent();
   const pct = lessonProgress(lesson);
   return (
-    <article className="flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-[0_8px_30px_rgba(37,29,107,0.07)] card-border">
+    <article className={`flex flex-col gap-4 rounded-3xl ${lesson.topic ? (findTopic(lesson.topic)?.card ?? "bg-white") : "bg-white"} p-6 shadow-[0_8px_30px_rgba(37,29,107,0.07)] card-border`}>
       <div>
         <h3 className="text-xl font-bold text-ink">{lesson.title}</h3>
         <p className="mt-1 line-clamp-2 text-body">{lesson.summary}</p>

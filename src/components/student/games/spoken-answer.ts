@@ -7,7 +7,7 @@ const NUM: Record<string, string> = {
 const ORDINAL: Record<string, number> = { first: 1, second: 2, third: 3 };
 // How letter names usually come out when heard by a recogniser.
 const LETTER: Record<string, string[]> = {
-  a: ["a", "ay", "hey", "eh"], b: ["b", "bee", "be"], c: ["c", "see", "sea", "cee"], d: ["d", "dee", "de"], e: ["e", "ee"], f: ["f", "eff", "ef"], g: ["g", "gee", "jee"],
+  a: ["a", "ay", "hey", "eh"], i: ["i", "eye", "aye"], o: ["o", "oh", "owe"], u: ["u", "you", "ewe"], b: ["b", "bee", "be"], c: ["c", "see", "sea", "cee"], d: ["d", "dee", "de"], e: ["e", "ee"], f: ["f", "eff", "ef"], g: ["g", "gee", "jee"],
   h: ["h", "aitch", "age"], l: ["l", "el", "elle"], m: ["m", "em"], p: ["p", "pee", "pea"], r: ["r", "are", "ar"], s: ["s", "ess", "es"], t: ["t", "tea", "tee"], w: ["w", "double you", "double u"],
 };
 
@@ -33,6 +33,22 @@ export function matchSpoken(text: string, choices: Choice[]): Choice | null {
       hits.add(i);
     }
   });
+
+  // A word only one choice has ("bath" for "Take a bath") is enough to point to it.
+  if (hits.size === 0) {
+    const STOP = new Set(["the", "a", "an", "our", "we", "to", "at", "on", "in", "of", "it", "some", "with", "and"]);
+    const own = choices.map((c) => words(c.label).filter((w) => !STOP.has(w) && w.length > 2));
+    own.forEach((ws, i) => {
+      const unique = ws.filter((w) => !own.some((o, j) => j !== i && o.includes(w)));
+      if (unique.some((w) => heard.includes(w))) hits.add(i);
+    });
+  }
+
+  // "Not safe" also contains "safe": when one label sits inside another, the longer one wins.
+  if (hits.size > 1) {
+    const longest = Math.max(...[...hits].map((i) => choices[i].label.length));
+    for (const i of [...hits]) if (choices[i].label.length < longest) hits.delete(i);
+  }
 
   // "choice two", "number 2", "the first one"
   if (hits.size === 0) {

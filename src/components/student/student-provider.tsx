@@ -23,6 +23,8 @@ export type Settings = {
   explore: boolean;
   /** Best star score (1 to 3) for each Game Zone game. */
   gameStars: Record<string, number>;
+  /** Days in a row a Game Zone game was finished. */
+  gameStreak: { last: string; count: number; done: string[] };
   /** Text-to-speech speed, 0.75 to 2. */
   speechRate: number;
   /** How captions look (size and colours). */
@@ -100,6 +102,7 @@ function defaultSettings(p: StudentProfile): Settings {
     supports: null,
     explore: false,
     gameStars: {},
+    gameStreak: { last: "", count: 0, done: [] },
     speechRate: 1,
     captions: { size: "l", theme: "dark" },
     signVideos: {},
@@ -173,6 +176,7 @@ export function StudentProvider({ children }: { children: React.ReactNode }) {
           reading: { ...base.reading, ...saved.reading },
           signVideos: { ...base.signVideos, ...saved.signVideos },
           gameStars: { ...base.gameStars, ...saved.gameStars },
+          gameStreak: { ...base.gameStreak, ...saved.gameStreak },
           aacCustom: Array.isArray(saved.aacCustom) ? saved.aacCustom : base.aacCustom,
         };
         // A child aged 5 to 10 gets the Explore shelf unless they or a parent switched it off.

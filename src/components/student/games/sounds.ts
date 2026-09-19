@@ -25,10 +25,28 @@ function tone(c: AudioContext, at: number, freq: number, dur: number, type: Osci
 }
 
 /** Play one of the game sounds. Returns how long it lasts, in seconds. */
-export function playGameSound(kind: "beeps" | "ticks" | "car"): number {
+export function playGameSound(kind: "beeps" | "ticks" | "car" | "left" | "right"): number {
   const c = context();
   if (!c) return 0;
   const t = c.currentTime + 0.05;
+  if (kind === "left" || kind === "right") {
+    const pan = c.createStereoPanner();
+    pan.pan.value = kind === "left" ? -1 : 1;
+    pan.connect(c.destination);
+    for (let i = 0; i < 3; i++) {
+      const o = c.createOscillator();
+      const g = c.createGain();
+      const at = t + i * 0.35;
+      o.frequency.value = 660;
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(0.4, at + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + 0.22);
+      o.connect(g).connect(pan);
+      o.start(at);
+      o.stop(at + 0.27);
+    }
+    return 1.1;
+  }
   if (kind === "beeps") {
     for (let i = 0; i < 6; i++) tone(c, t + i * 0.22, 1000, 0.1, "sine", 0.35);
     navigator.vibrate?.([100, 120, 100, 120, 100, 120, 100]);

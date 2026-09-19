@@ -13,7 +13,8 @@ export async function POST(request: Request) {
   }
   const b = await request.json().catch(() => ({}));
   const question = typeof b.question === "string" ? b.question.trim() : "";
-  const mode = b.mode === "explain" || b.mode === "summary" ? b.mode : "question";
+  const mode = b.mode === "explain" || b.mode === "summary" || b.mode === "topic" ? b.mode : "question";
+  const age = Number.isFinite(Number(b.age)) ? Math.min(19, Math.max(3, Math.round(Number(b.age)))) : 14;
   if (!question || typeof b.material !== "string") {
     return NextResponse.json({ error: "Nothing to answer." }, { status: 400 });
   }
@@ -27,6 +28,7 @@ export async function POST(request: Request) {
     const answer = await askTutor({
       question,
       mode,
+      age,
       title: typeof b.title === "string" ? b.title.slice(0, 200) : "",
       material: b.material,
       current: typeof b.current === "string" ? b.current : "",

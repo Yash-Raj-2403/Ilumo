@@ -63,34 +63,78 @@ export function BlindLowVisionSupport() {
   return <Source lessons={lessons} voice={voice} onLoad={setDoc} />;
 }
 
+// ---- asking the AI tutor ---------------------------------------------------------
+type TutorBody = { question: string; mode: "explain" | "question" | "summary" | "topic"; title: string; age: number; material: string; current: string; history: { q: string; a: string }[] };
+
+/** Ask Gemini (through our own server) and get back a spoken-style answer. Throws when it can't. */
+async function fetchAnswer(body: TutorBody): Promise<string> {
+  const res = await authedFetch("/api/voice/ask", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(45_000),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.answer) throw new Error("no answer");
+  return data.answer as string;
+}
+
+const QUESTION_WORDS = /^(why|how|what|when|where|who|which|can|could|is|are|do|does|did|tell|give|teach|show|explain|describe|define|i want|i wanna|i'd like|help me)\b/;
+
 // ---- choose what to read ------------------------------------------------------
 const SAMPLE_TITLE = "Photosynthesis (sample)";
 const ORDINALS: Record<string, number> = { one: 1, first: 1, two: 2, second: 2, three: 3, third: 3, four: 4, fourth: 4, five: 5, fifth: 5, six: 6, sixth: 6 };
 
 function Source({ lessons, voice, onLoad }: { lessons: Lesson[]; voice: Voice; onLoad: (d: Doc) => void }) {
+  const { student } = useStudent();
+  const history = useRef<{ q: string; a: string }[]>([]);
   const choices = useMemo(
     () => [{ title: SAMPLE_TITLE, spoken: "the sample lesson, Photosynthesis", doc: () => lessonToDoc(SAMPLE_TITLE, sampleLesson as LessonContent) },
       ...lessons.map((l) => ({ title: l.title, spoken: l.title, doc: () => lessonToDoc(l.title, l) }))],
     [lessons],
   );
-  const options = choices.map((c, i) => `${i + 1}, ${c.spoken}`).join(". ");
+  // Read out at most five choices, so the list never becomes a long speech. Any number still works.
+  const options = (() => {
+    const seen = new Set<string>();
+    const shown = choices.map((c, i) => ({ c, n: i + 1 })).filter(({ c }) => !seen.has(c.title) && seen.add(c.title)).slice(0, 5);
+    const more = choices.length - shown.length;
+    return shown.map(({ c, n }) => `${n}, ${c.spoken}`).join(". ") + (more > 0 ? `. And ${more} more on the page` : "");
+  })();
 
-  // Voice on the list: pick by name or number.
+  // Voice on the list: pick something to read by name or number, or just ask anything and get an answer from the AI tutor.
   useEffect(() => {
+    async function answer(mode: "topic" | "question", question: string) {
+      voice.say(mode === "topic" ? "Let me explain that." : "One moment.", undefined, undefined, false);
+      try {
+        const a = await fetchAnswer({ question, mode, title: "", age: student.age, material: "", current: "", history: history.current });
+        history.current = [...history.current, { q: question, a }].slice(-3);
+        voice.say(a, undefined, `${a} Ask me more, or say the name of something to read.`);
+      } catch {
+        voice.say("Sorry, I can't answer that right now because the AI tutor isn't available. Please try again in a minute.");
+      }
+    }
     voice.setHandler((text) => {
       const t = text.toLowerCase();
       const intent = parseCommand(text);
       if (intent.type === "help" || /\b(options|list|what (is|are) there)\b/.test(t)) {
-        return voice.say(`You can read: ${options}. Say the name or the number. To read your own file, use the choose file button on this page, or paste text.`);
+        return voice.say(`You can read: ${options}. Say the name or the number. Or ask me anything, like: explain photosynthesis. To read your own file, use the choose file button on this page, or paste text.`);
       }
+      if (intent.type === "greeting") return voice.say("Hello! What would you like to read or learn about? You can say the name of a lesson, or ask me a question.");
+      if (intent.type === "thanks") return voice.say("You're welcome.", undefined, undefined, false);
+      // A question or "explain X" is answered, even when it names one of the lessons.
+      const asking = intent.type === "topic" || intent.type === "explain" || (intent.type === "ask" && QUESTION_WORDS.test(t));
+      if (asking) return answer(intent.type === "topic" ? "topic" : "question", intent.type === "topic" ? `Explain ${intent.topic}` : text);
       const num = /\b(\d)\b/.exec(t)?.[1] ?? Object.entries(ORDINALS).find(([w]) => new RegExp(`\\b${w}\\b`).test(t))?.[1];
       let pick = num ? choices[Number(num) - 1] : undefined;
       pick ??= choices.find((c) => t.includes(c.title.toLowerCase().replace(/ \(sample\)/, ""))) ?? (/\bsample\b/.test(t) ? choices[0] : undefined);
       if (pick) return onLoad(pick.doc());
-      voice.say(`I didn't catch which one. You can read: ${options}.`);
+      // Longer sentences that aren't lesson names are questions for the tutor. Anything shorter or unclear is not
+      // answered, so stray words or noise never start a chain of replies.
+      if (t.trim().split(/\s+/).length >= 4) return answer("question", text);
+      voice.say("I didn't catch that. Say help to hear what I can do, or ask me a question.", undefined, undefined, false);
     });
     return () => voice.setHandler(null);
-  }, [voice, choices, options, onLoad]);
+  }, [voice, choices, options, onLoad, student.age]);
 
   const [file, setFile] = useState<File | null>(null);
   const [pasted, setPasted] = useState("");
@@ -135,28 +179,30 @@ function Source({ lessons, voice, onLoad }: { lessons: Lesson[]; voice: Voice; o
         <p className="mt-3 text-xl leading-relaxed text-body">
           Have anything read aloud, hear every picture described, and turn it into braille you can print.
         </p>
-        <ul className="mt-4 flex flex-wrap gap-2 text-base font-semibold text-brand-deep">
-          {["Read aloud", "Image descriptions", "Reads pictures & PDFs (OCR)", "Braille export", "Large text", "High contrast"].map((f) => (
-            <li key={f} className="rounded-full bg-brand-soft px-4 py-1.5">{f}</li>
-          ))}
-        </ul>
+        <p className="mt-3 text-lg text-body">
+          <span className="font-semibold text-ink">What you can do here: </span>
+          read aloud, picture descriptions, reading pictures and PDFs, braille export, large text and high contrast.
+        </p>
+        <p className="mt-3 rounded-2xl bg-tint-yellow p-4 text-lg font-semibold text-ink ring-1 ring-black/10">
+          Tip: press the space bar and say the name or number of a lesson to hear it.
+        </p>
       </header>
 
-      <VoiceBar voice={voice} />
+      <VoiceBar voice={voice} commands={false} />
 
       <section aria-labelledby="mylessons">
         <h2 id="mylessons" className="mb-4 text-2xl font-bold text-ink">Read a lesson</h2>
         <ul className="grid gap-4 sm:grid-cols-2">
           <li>
             <button type="button" className={card} onClick={() => onLoad(lessonToDoc("Photosynthesis (sample)", sampleLesson as LessonContent))}>
-              <span className="text-xl font-bold text-ink">Photosynthesis</span>
+              <span className="text-xl font-bold text-ink"><span className="mr-2 inline-flex size-8 items-center justify-center rounded-full bg-brand-deep text-base text-white" aria-hidden>1</span>Photosynthesis</span>
               <span className="text-body">Sample lesson with a diagram description.</span>
             </button>
           </li>
-          {lessons.map((l) => (
+          {lessons.map((l, n) => (
             <li key={l.id}>
               <button type="button" className={card} onClick={() => onLoad(lessonToDoc(l.title, l))}>
-                <span className="text-xl font-bold text-ink">{l.title}</span>
+                <span className="text-xl font-bold text-ink"><span className="mr-2 inline-flex size-8 items-center justify-center rounded-full bg-brand-deep text-base text-white" aria-hidden>{n + 2}</span>{l.title}</span>
                 <span className="line-clamp-2 text-body">{l.summary}</span>
               </button>
             </li>
@@ -212,7 +258,7 @@ function Source({ lessons, voice, onLoad }: { lessons: Lesson[]; voice: Voice; o
 const RATES = [0.75, 1, 1.25, 1.5, 2];
 
 function Reader({ doc, voice, onExit }: { doc: Doc; voice: Voice; onExit: () => void }) {
-  const { speech, speechAvailable, settings, updateSettings, stepTextSize, playQueue, pauseQueue, resumeQueue, stopQueue, setSpeechRate, speakOne, registerReadables } = useStudent();
+  const { speech, speechAvailable, settings, student, updateSettings, stepTextSize, playQueue, pauseQueue, resumeQueue, stopQueue, setSpeechRate, speakOne, registerReadables } = useStudent();
   const items = useMemo<ReadItem[]>(() => doc.blocks.map((b) => ({ id: b.id, text: spoken(b) })), [doc]);
   const current = doc.blocks.findIndex((b) => b.id === speech.currentId);
   const activeRef = useRef<HTMLLIElement>(null);
@@ -257,61 +303,70 @@ function Reader({ doc, voice, onExit }: { doc: Doc; voice: Voice; onExit: () => 
 
   // Talking opens the microphone. Reading pauses meanwhile, and picks up again if nothing is said.
   const pausedForTalk = useRef(false);
+  /** The part being read when the person interrupted, so reading can carry on after an answer. */
+  const resumeAt = useRef<number | null>(null);
   useEffect(() => {
     voice.setHooks({
       onOpen: () => {
-        const { status, speaking } = latest.current;
+        const { status, speaking, current: cur } = latest.current;
         if (status === "playing" && speaking !== "voice") {
           pauseQueue();
           pausedForTalk.current = true;
+          resumeAt.current = cur >= 0 ? cur : lastIdx.current;
         } else if (speaking === "voice") stopQueue();
       },
       onHeard: () => { pausedForTalk.current = false; },
       onNoVoice: () => {
-        if (!pausedForTalk.current) return false;
-        pausedForTalk.current = false;
-        resumeQueue();
-        return true;
+        // Nobody spoke: pick reading up exactly where it stopped.
+        if (pausedForTalk.current) {
+          pausedForTalk.current = false;
+          resumeAt.current = null;
+          resumeQueue();
+          return true;
+        }
+        // An answer was given and nothing more was said: carry on with the reading.
+        if (resumeAt.current !== null) {
+          const at = resumeAt.current;
+          resumeAt.current = null;
+          voice.say("Okay, I'll carry on reading.", () => playQueue(items, at), undefined, false);
+          return true;
+        }
+        return false;
       },
     });
     return () => voice.setHooks({});
-  }, [voice, pauseQueue, resumeQueue, stopQueue]);
+  }, [voice, pauseQueue, resumeQueue, stopQueue, playQueue, items]);
   useEffect(() => {
     const idx = () => (latest.current.current >= 0 ? latest.current.current : lastIdx.current);
     const play = (i: number) => playQueue(items, Math.max(0, Math.min(items.length - 1, i)));
     const blocks = doc.blocks;
 
-    async function askTutor(mode: "explain" | "question" | "summary", text: string) {
+    async function askTutor(mode: "explain" | "question" | "summary" | "topic", text: string) {
       const here = idx();
-      voice.say("One moment.", undefined, undefined, false);
+      voice.say(mode === "topic" ? "Let me explain that." : "One moment.", undefined, undefined, false);
       try {
-        const res = await authedFetch("/api/voice/ask", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            question: text, mode, title: doc.title,
-            material: blocks.map((b) => b.text).join("\n"),
-            current: blocks[here]?.text ?? "",
-            history: history.current,
-          }),
-          signal: AbortSignal.timeout(45_000),
+        const answer = await fetchAnswer({
+          question: text, mode, title: doc.title, age: student.age,
+          material: blocks.map((b) => b.text).join("\n"),
+          current: blocks[here]?.text ?? "",
+          history: history.current,
         });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || !data.answer) throw new Error("no answer");
-        history.current = [...history.current, { q: text, a: data.answer }].slice(-3);
-        voice.say(data.answer, undefined, `${data.answer} Say continue to keep reading, or ask me more.`);
+        history.current = [...history.current, { q: text, a: answer }].slice(-3);
+        voice.say(answer, undefined, `${answer} Say continue to keep reading, or ask me more.`);
       } catch {
         // The AI isn't reachable: fall back to the material itself.
         if (mode === "explain") return voice.say("I couldn't put that in other words just now, so I'll read that part again.", () => play(here), undefined, false);
         const hit = findBestBlock(text, blocks);
-        if (hit) return voice.say("I couldn't ask the AI just now. Here's the closest part of the material.", () => play(blocks.indexOf(hit)), undefined, false);
-        voice.say("Sorry, I couldn't find that in the material.");
+        if (hit) return voice.say("I couldn't reach the AI tutor just now. Here is the closest part of your material.", () => play(blocks.indexOf(hit)), undefined, false);
+        voice.say("Sorry, I can't answer that right now because the AI tutor isn't available. Please try again in a minute.");
       }
     }
 
     voice.setHandler(async (text) => {
       const intent = parseCommand(text);
       const { status, rate } = latest.current;
+      // Anything that isn't a question starts its own reading, so the "carry on afterwards" point is dropped.
+      if (!["topic", "ask", "explain", "greeting", "thanks"].includes(intent.type)) resumeAt.current = null;
       switch (intent.type) {
         case "help":
           return voice.say("You can say: repeat. Explain that. Faster or slower. Pause, continue or stop. Next or go back. Read the summary. Describe the image. Download braille. Or ask me any question about the material.");
@@ -366,14 +421,24 @@ function Reader({ doc, voice, onExit }: { doc: Doc; voice: Voice; onExit: () => 
         case "exit":
           voice.say("Back to your list. What would you like to read?");
           return onExit();
+        case "greeting":
+          return voice.say("Hello! Say continue to keep reading, or ask me anything.");
+        case "thanks":
+          return voice.say("You're welcome.", undefined, undefined, false);
+        case "topic":
+          return askTutor("topic", `Explain ${intent.topic}`);
         case "explain":
           return askTutor("explain", text);
         case "ask":
+          // One or two stray words (noise, a cough, part of ILUMO's own voice) aren't sent to the AI.
+          if (text.trim().split(/\s+/).length < 3 && !QUESTION_WORDS.test(text.toLowerCase())) {
+            return voice.say("I didn't catch that. Say help to hear what I can do, or ask me a question.", undefined, undefined, false);
+          }
           return askTutor("question", text);
       }
     });
     return () => voice.setHandler(null);
-  }, [voice, items, doc, playQueue, pauseQueue, resumeQueue, stopQueue, setSpeechRate, onExit]);
+  }, [voice, items, doc, student.age, playQueue, pauseQueue, resumeQueue, stopQueue, setSpeechRate, onExit]);
 
   // Keep the block being read in view.
   useEffect(() => {

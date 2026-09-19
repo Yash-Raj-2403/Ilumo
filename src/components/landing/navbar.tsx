@@ -20,7 +20,7 @@ const links = [
   { label: "Features", href: "/#features", id: "features" },
   { label: "Our Impact", href: "/impact", id: "impact" },
   { label: "Awareness", href: "/blog", id: "blog" },
-  { label: "For Parents", href: "/signup?role=parent", id: "parents" },
+  { label: "For Parents", href: "/parents", id: "parents" },
   { label: "Contact", href: "/contact", id: "contact" },
 ];
 
@@ -53,6 +53,7 @@ export function Navbar() {
     : pathname.startsWith("/impact") ? "impact"
     : pathname.startsWith("/blog") ? "blog"
     : pathname.startsWith("/contact") ? "contact"
+    : pathname.startsWith("/parents") || pathname === "/parent" || pathname.startsWith("/parent/") ? "parents"
     : pathname.startsWith("/student/support") ? "features"
     : null;
   const [open, setOpen] = useState(false);
@@ -62,7 +63,11 @@ export function Navbar() {
   const { role, supports: mine } = useMyProfile();
   const dashboardHref = role === "parent" ? "/parent" : "/student";
   // Inside the app, "Features" goes to the learner's own support list, not back to the landing page.
-  const navLinks = links.map((l) => (l.id === "features" && inApp ? { ...l, href: role === "parent" ? "/parent" : "/student#support" } : l));
+  const navLinks = links.map((l) =>
+    l.id === "features" && inApp ? { ...l, href: role === "parent" ? "/parent" : "/student#support" }
+    : l.id === "parents" && role === "parent" ? { ...l, href: "/parent" } // a parent goes straight to their dashboard
+    : l,
+  );
   const supports = mine === undefined ? [] : mine ? allSupports.filter((s) => mine.includes(s.slug)) : allSupports;
   const logOut = async () => {
     setOpen(false);
@@ -126,8 +131,8 @@ export function Navbar() {
                   <MenuItem key={l.id} item={l.label} href={l.href} current={isCurrent} active={active} setActive={setActive}>
                     <div className="flex w-56 flex-col gap-3 p-1 text-sm">
                       <p className="text-body">Follow progress and shape the way your child learns.</p>
-                      <HoveredLink href="/signup?role=parent" className="font-semibold text-brand">
-                        Go to parent space →
+                      <HoveredLink href={l.href} className="font-semibold text-brand">
+                        {role === "parent" ? "Open my parent dashboard →" : "Go to parent space →"}
                       </HoveredLink>
                     </div>
                   </MenuItem>

@@ -14,7 +14,7 @@ export type Round = {
   /** Said and shown after the right pick. */
   praise: string;
   /** Sound for listening games. */
-  sound?: "beeps" | "ticks" | "car";
+  sound?: "beeps" | "ticks" | "car" | "left" | "right";
 };
 
 const shuffle = <T,>(xs: T[]): T[] => {
@@ -131,10 +131,193 @@ function streetSmart(): Round[] {
   }));
 }
 
+
+const RHYMES = [
+  { w: "cat", e: "🐱", r: "hat" }, { w: "dog", e: "🐶", r: "log" }, { w: "sun", e: "☀️", r: "run" }, { w: "bee", e: "🐝", r: "tree" },
+  { w: "star", e: "⭐", r: "car" }, { w: "cake", e: "🎂", r: "lake" }, { w: "moon", e: "🌙", r: "spoon" }, { w: "boat", e: "⛵", r: "coat" },
+];
+function rhymeTime(): Round[] {
+  return pick(RHYMES, 5).map((it) => {
+    const others = pick(RHYMES.filter((x) => x.w !== it.w).flatMap((x) => [x.w, x.r]).filter((w) => w !== it.r), 2);
+    return {
+      prompt: `Which word rhymes with ${it.w}?`,
+      say: `Which word rhymes with ${it.w}?`,
+      picture: { text: it.e, alt: it.w },
+      choices: shuffle([{ label: it.r, ok: true }, ...others.map((label) => ({ label, ok: false }))]),
+      hint: (w) => `Say them out loud: ${it.w}, ${w.label}. Do they end with the same sound? Try another.`,
+      praise: `${cheer()} ${it.w} and ${it.r} rhyme.`,
+    };
+  });
+}
+
+const VOWEL_WORDS = [
+  { w: "cat", e: "🐱", v: "a" }, { w: "dog", e: "🐶", v: "o" }, { w: "sun", e: "☀️", v: "u" }, { w: "pig", e: "🐷", v: "i" },
+  { w: "bed", e: "🛏️", v: "e" }, { w: "bus", e: "🚌", v: "u" }, { w: "hen", e: "🐔", v: "e" }, { w: "pin", e: "📌", v: "i" },
+];
+function missingLetter(): Round[] {
+  return pick(VOWEL_WORDS, 5).map((it) => {
+    const gap = `${it.w[0]} _ ${it.w[2]}`;
+    const others = pick(["a", "e", "i", "o", "u"].filter((v) => v !== it.v), 2);
+    return {
+      prompt: "Which letter is missing?",
+      say: `Which letter is missing? ${it.w[0]}, blank, ${it.w[2]}.`,
+      picture: { text: it.e, alt: `A picture of a ${it.w}` },
+      sub: gap,
+      choices: shuffle([it.v, ...others]).map((v) => ({ label: v.toUpperCase(), ok: v === it.v })),
+      hint: () => `Say the word slowly: ${it.w}. The middle sound is the vowel ${it.v.toUpperCase()}.`,
+      praise: `${cheer()} ${it.w[0]}, ${it.v}, ${it.w[2]} spells ${it.w}.`,
+    };
+  });
+}
+
+function takeAway(): Round[] {
+  return Array.from({ length: 5 }, () => {
+    const a = 3 + Math.floor(Math.random() * 6);
+    const b = 1 + Math.floor(Math.random() * (a - 1));
+    const left = a - b;
+    const f = FRUITS[Math.floor(Math.random() * FRUITS.length)];
+    const wrong = pick([left - 2, left - 1, left + 1, left + 2].filter((n) => n >= 0 && n <= 10), 2);
+    return {
+      prompt: `${a} take away ${b}. How many are left?`,
+      say: `${COUNT_WORDS[a]} take away ${COUNT_WORDS[b]}. How many are left?`,
+      picture: { text: f.repeat(a), alt: `${a} fruit` },
+      sub: `${a} − ${b}`,
+      choices: shuffle([{ label: String(left), ok: true }, ...wrong.map((n) => ({ label: String(n), ok: false }))]),
+      hint: () => `Start with ${COUNT_WORDS[a]}. Put ${COUNT_WORDS[b]} away. Now count what is left.`,
+      praise: `${cheer()} ${a} take away ${b} leaves ${left}.`,
+    };
+  });
+}
+
+const SHAPES = [
+  { e: "🔴", n: "Circle", h: "A circle is round and has no corners." }, { e: "🟦", n: "Square", h: "A square has four sides that are the same." },
+  { e: "🔺", n: "Triangle", h: "A triangle has three corners." }, { e: "⭐", n: "Star", h: "A star has five points." },
+  { e: "❤️", n: "Heart", h: "A heart has two round bumps at the top and a point at the bottom." }, { e: "🔷", n: "Diamond", h: "A diamond has four sides and stands on a corner." },
+];
+function shapeFinder(): Round[] {
+  return pick(SHAPES, 5).map((it) => ({
+    prompt: "What shape is this?",
+    say: "What shape is this?",
+    picture: { text: it.e, alt: `A ${it.n.toLowerCase()}` },
+    choices: shuffle([{ label: it.n, ok: true }, ...pick(SHAPES.filter((x) => x.n !== it.n), 2).map((x) => ({ label: x.n, ok: false }))]),
+    hint: (w) => `Not ${w.label}. Look at the corners and the sides. Try another.`,
+    praise: `${cheer()} It is a ${it.n.toLowerCase()}. ${it.h}`,
+  }));
+}
+
+const HOMES = [
+  { e: "🐟", w: "a fish", h: "Water" }, { e: "🐦", w: "a bird", h: "Nest" }, { e: "🐄", w: "a cow", h: "Farm" },
+  { e: "🐝", w: "a bee", h: "Hive" }, { e: "🐻", w: "a bear", h: "Forest" },
+];
+function animalHomes(): Round[] {
+  return pick(HOMES, 5).map((it) => ({
+    prompt: `Where does ${it.w} live?`,
+    say: `Where does ${it.w} live?`,
+    picture: { text: it.e, alt: it.w.replace(/^a /, "") },
+    choices: shuffle([{ label: it.h, ok: true }, ...pick(HOMES.filter((x) => x.h !== it.h), 2).map((x) => ({ label: x.h, ok: false }))]),
+    hint: (w) => `${w.label} is home to a different animal. Think about where ${it.w} finds food and shelter.`,
+    praise: `${cheer()} ${it.w[0].toUpperCase()}${it.w.slice(1)} lives in ${/^[aeiou]/i.test(it.h) ? "an" : "a"} ${it.h.toLowerCase()}.`,
+  }));
+}
+
+const SENSES = [
+  { e: "🌸", q: "smell a flower", a: "Nose", pic: "👃" }, { e: "🔔", q: "hear a bell", a: "Ears", pic: "👂" },
+  { e: "🌈", q: "see a rainbow", a: "Eyes", pic: "👀" }, { e: "🍦", q: "taste an ice cream", a: "Tongue", pic: "👅" },
+  { e: "🧸", q: "feel something soft", a: "Hands", pic: "✋" },
+];
+function fiveSenses(): Round[] {
+  return pick(SENSES, 5).map((it) => ({
+    prompt: `What do we use to ${it.q}?`,
+    say: `What do we use to ${it.q}?`,
+    picture: { text: it.e, alt: it.q },
+    choices: shuffle([it, ...pick(SENSES.filter((x) => x.a !== it.a), 2)]).map((x) => ({ label: x.a, ok: x.a === it.a, picture: x.pic })),
+    hint: () => `Think about how we ${it.q}. Try another.`,
+    praise: `${cheer()} We use our ${it.a.toLowerCase()} to ${it.q}.`,
+  }));
+}
+
+const ROUTINE = [
+  { e: "🍽️", q: "Before we eat, what do we do?", a: "Wash our hands", w: ["Kick a ball", "Turn off the light"], why: "Washing hands takes germs away." },
+  { e: "🌙", q: "It is night time. What do we do?", a: "Go to sleep", w: ["Eat breakfast", "Go to school"], why: "Sleep helps our body rest." },
+  { e: "🌧️", q: "It is raining. What can we take?", a: "An umbrella", w: ["A kite", "Sunglasses"], why: "An umbrella keeps us dry." },
+  { e: "🪥", q: "In the morning we clean our teeth with what?", a: "A toothbrush", w: ["A spoon", "A shoe"], why: "A toothbrush keeps our teeth clean." },
+  { e: "☀️", q: "It is very hot. What should we drink?", a: "Water", w: ["Soap", "Sand"], why: "Water keeps us cool and healthy." },
+  { e: "⚽", q: "We played in the mud. What do we do next?", a: "Take a bath", w: ["Go to sleep at once", "Put on a hat"], why: "A bath gets us clean." },
+];
+function dailyRoutine(): Round[] {
+  return pick(ROUTINE, 5).map((it) => ({
+    prompt: it.q,
+    say: it.q,
+    picture: { text: it.e, alt: it.q },
+    choices: shuffle([{ label: it.a, ok: true }, ...it.w.map((label) => ({ label, ok: false }))]),
+    hint: () => "Think about what helps us most. Try another.",
+    praise: `${cheer()} ${it.why}`,
+  }));
+}
+
+const FACES = [
+  { e: "😊", n: "Happy" }, { e: "😢", n: "Sad" }, { e: "😠", n: "Angry" }, { e: "😨", n: "Scared" }, { e: "😴", n: "Sleepy" }, { e: "😲", n: "Surprised" },
+];
+function feelingFaces(): Round[] {
+  return pick(FACES, 5).map((it) => ({
+    prompt: "How does this face feel?",
+    say: "How does this face feel?",
+    picture: { text: it.e, alt: `A ${it.n.toLowerCase()} face` },
+    choices: shuffle([{ label: it.n, ok: true }, ...pick(FACES.filter((x) => x.n !== it.n), 2).map((x) => ({ label: x.n, ok: false }))]),
+    hint: () => "Look at the eyes and the mouth. What do they tell you?",
+    praise: `${cheer()} This face looks ${it.n.toLowerCase()}. All feelings are okay.`,
+  }));
+}
+
+function soundFinder(): Round[] {
+  return Array.from({ length: 5 }, () => {
+    const side: "left" | "right" = Math.random() < 0.5 ? "left" : "right";
+    return {
+      prompt: "Listen. Which side is the sound on?",
+      say: "Press Play sound and listen. Which side is the sound on?",
+      picture: { text: "🎧", alt: "Headphones" },
+      sound: side,
+      choices: ["Left", "Right"].map((k) => ({ label: k, ok: k.toLowerCase() === side })),
+      hint: () => `Listen again. Turn your head a little, and hear which ear it is louder in.`,
+      praise: `${cheer()} The sound was on the ${side}.`,
+    };
+  });
+}
+
+const SAFETY = [
+  { e: "🍳", q: "Touching a hot stove", safe: false, why: "A hot stove can burn you. Ask a grown-up for help." },
+  { e: "🚴", q: "Wearing a helmet on a bike", safe: true, why: "A helmet protects your head." },
+  { e: "🚸", q: "Holding a grown-up's hand to cross the road", safe: true, why: "A grown-up helps you cross safely." },
+  { e: "🔪", q: "Playing with a sharp knife", safe: false, why: "Sharp things can cut you. Leave them for grown-ups." },
+  { e: "🧼", q: "Washing your hands with soap", safe: true, why: "Soap washes germs away." },
+  { e: "🏃", q: "Running into the road after a ball", safe: false, why: "Cars may be coming. Ask a grown-up to help." },
+  { e: "🚫", q: "Going away with someone you do not know", safe: false, why: "Stay with your grown-up and tell them right away." },
+];
+function safeOrNot(): Round[] {
+  return pick(SAFETY, 5).map((it) => ({
+    prompt: `${it.q}. Is it safe?`,
+    say: `${it.q}. Is it safe?`,
+    picture: { text: it.e, alt: it.q },
+    choices: [{ label: "Safe", ok: it.safe }, { label: "Not safe", ok: !it.safe }],
+    hint: () => `Think again. ${it.why}`,
+    praise: `${cheer()} ${it.why}`,
+  }));
+}
+
 export const BUILDERS: Record<string, () => Round[]> = {
   "letter-match": letterMatch,
   "fruit-count": fruitCount,
   "matter-sort": matterSort,
   "coin-shop": coinShop,
   "street-smart": streetSmart,
+  "rhyme-time": rhymeTime,
+  "missing-letter": missingLetter,
+  "take-away": takeAway,
+  "shape-finder": shapeFinder,
+  "animal-homes": animalHomes,
+  "five-senses": fiveSenses,
+  "daily-routine": dailyRoutine,
+  "feeling-faces": feelingFaces,
+  "sound-finder": soundFinder,
+  "safe-or-not": safeOrNot,
 };

@@ -5,6 +5,8 @@ export const RATES = [0.75, 1, 1.25, 1.5, 2] as const;
 
 export type Intent =
   | { type: "help" }
+  | { type: "greeting" }
+  | { type: "thanks" }
   | { type: "stop" }
   | { type: "pause" }
   | { type: "resume" }
@@ -21,6 +23,7 @@ export type Intent =
   | { type: "braille"; action: "download" | "print" | "copy" }
   | { type: "large-print" }
   | { type: "exit" }
+  | { type: "topic"; topic: string; text: string }
   | { type: "explain"; text: string }
   | { type: "ask"; text: string };
 
@@ -33,6 +36,10 @@ export function parseCommand(raw: string): Intent {
   const t = normalize(raw);
   if (!t) return { type: "ask", text: raw };
 
+  // Small talk: a greeting or a thank-you is answered kindly and never mistaken for a lesson or a question.
+  if (/^(hello|hi|hey|hiya|howdy|greetings|good (morning|afternoon|evening)|hello there|hi there|hey there)( ilumo| there)?$/.test(t)) return { type: "greeting" };
+  if (/^(thanks|thank you|thank you (so much|very much)|thanks a lot|cheers|okay|ok|alright|all right|cool|great|nice|got it|i see|good|fine|yes|yeah|no|nope)( ilumo| thanks)?$/.test(t)) return { type: "thanks" };
+
   // Braille and print requests first: they mention words ("read", "print") used elsewhere.
   if (has(t, /\bbraille\b|\bbrf\b|\bembos/)) {
     if (has(t, /\bprint|\bembos/)) return { type: "braille", action: "print" };
@@ -41,7 +48,7 @@ export function parseCommand(raw: string): Intent {
   }
   if (has(t, /\b(large|big|bigger) (print|text)\b|\bprint (this|it|the (text|page|document))\b/)) return { type: "large-print" };
 
-  if (has(t, /\b(what can (i|you)|help|commands|options|how do (i|you)|instructions)\b/) && !has(t, /help me (understand|with (this|the))/))
+  if (has(t, /\b(what can (i|you) (say|do)|help|commands|options|how do i (use|talk|say|control)|instructions)\b/) && !has(t, /help me (understand|with (this|the))/))
     return { type: "help" };
 
   // Speed
@@ -55,10 +62,14 @@ export function parseCommand(raw: string): Intent {
   if (has(t, /\b(speed (it )?up|faster|quicker|hurry( up)?|too slow|go fast(er)?)\b/)) return { type: "faster", steps: 1 };
   if (has(t, /\b(slow (it )?down|slower|too fast|not so fast|go slow(er)?)\b/)) return { type: "slower", steps: 1 };
 
+  // "Explain photosynthesis", "tell me about roots", "what is chlorophyll": a named topic gets a full explanation.
+  const topic = topicOf(t);
+  if (topic) return { type: "topic", topic, text: raw };
+
   // "Explain" must be checked before "repeat" so "explain that again" explains.
   if (has(t, /\b(explain|simplif|clarify|break (it|this|that) down|in (simple|simpler|plain) (words|terms|language)|easier|simpler)\b/) ||
       has(t, /\b(i )?(don't|do not|didn't|did not|can't|cannot|couldn't) (really )?(understand|get|follow)\b/) ||
-      has(t, /\b(i'm|i am|im) (confused|lost)\b|\bconfus|\bnot (clear|sure what)\b|\bwhat does (that|this|it) mean\b|\bmeaning of\b/))
+      has(t, /\b(i'm|i am|im) (confused|lost)\b|\bconfus|\bnot (clear|sure what)\b|\bwhat does (that|this|it) mean\b|\bmeaning of\b|\bwhat is (that|this|it)\b/))
     return { type: "explain", text: raw };
 
   if (has(t, /\b(repeat|say (that|it|this) again|again please|once more|one more time|read (that|it|this) again|come again|pardon|sorry what|what did you say|(didn't|did not|couldn't|could not|missed|miss) (quite |really )?(catch|hear|get) (that|it|what))\b/) || t === "again" || t === "what")
@@ -80,6 +91,21 @@ export function parseCommand(raw: string): Intent {
   if (has(t, /\b(previous|go back|back up|last (part|one|section)|before that|rewind|back)\b/)) return { type: "previous" };
 
   return { type: "ask", text: raw };
+}
+
+const ANAPHORA = /^((it|that|this)( again| more| better)?( in (simple|simpler|plain) (words|terms|language))?|that|this|it|again|once more|more|that again|this again|it again|simpler|simply|better|differently|in (simple|simpler|plain) (words|terms|language)|to me|please|the last (part|one|bit)|what (you|it) (just )?said|the (part|bit) (you|we) (just )?(read|heard))$/;
+const NOT_A_TOPIC = /\b(summary|summarie?s|overview|image|images|picture|pictures|diagram|figure|photo|chart|illustration|braille|speed|louder|quieter|help)\b/;
+
+/** The subject of "explain X", "tell me about X", "what is X" and similar, or null when it isn't a named topic. */
+function topicOf(t: string): string | null {
+  const m = /\b(?:explain|tell me (?:more )?about|teach me(?: about)?|talk about|describe|what is|what are|what's|whats|who is|who was|who were|define|i want to (?:learn|know) about|i want to understand)\s+(.+)$/.exec(t);
+  if (!m) return null;
+  let rest = m[1];
+  for (let i = 0; i < 3; i++) rest = rest.replace(/^(the|a|an|about|to me|me|how|why|what|of)\s+/, "");
+  rest = rest.replace(/\s+(please|to me|again|for me)$/, "").trim();
+  if (!rest || ANAPHORA.test(rest) || NOT_A_TOPIC.test(rest)) return null;
+  const meaningful = rest.split(" ").filter((w) => w.length > 2 && !STOP.has(w));
+  return meaningful.length ? rest : null;
 }
 
 /** One step faster/slower along the available speeds, clamped at both ends. */
@@ -118,9 +144,17 @@ export function findBestBlock<T extends { text: string }>(question: string, bloc
  */
 export function isEcho(heard: string, spoken: string | null | undefined): boolean {
   if (!spoken) return false;
+  // Three or more words that appear one after another in what was just said out loud are ILUMO's own voice.
+  const heardAll = normalize(heard);
+  if (heardAll.split(" ").length >= 3 && ` ${normalize(spoken)} `.includes(` ${heardAll} `)) return true;
   const h = words(heard);
-  if (h.length < 3) return false; // short commands like "faster" are never treated as echo
+  if (h.length < 4) return false; // short commands and short questions are never treated as echo
   const s = new Set(words(spoken));
   const hits = h.filter((w) => s.has(w)).length;
-  return hits / h.length >= 0.7;
+  // Echo is a run of the spoken words in the same order, not just a question that shares a few of them.
+  const sw = words(spoken);
+  const seen = new Set(sw.slice(1).map((w, i) => `${sw[i]} ${w}`));
+  const pairs = h.slice(1).map((w, i) => `${h[i]} ${w}`);
+  const pairHits = pairs.filter((p) => seen.has(p)).length;
+  return hits / h.length >= 0.8 && pairHits / Math.max(1, pairs.length) >= 0.75;
 }

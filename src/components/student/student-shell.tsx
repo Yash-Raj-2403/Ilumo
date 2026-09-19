@@ -34,6 +34,14 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (wrongArea) router.replace(parent ? "/parent" : "/student");
   }, [wrongArea, parent, router]);
+  // The brighter "kids look" is for the Game Zone age group.
+  const kids = settings.explore && !parent;
+  useEffect(() => {
+    const el = document.documentElement;
+    if (kids) el.dataset.kids = "on";
+    else delete el.dataset.kids;
+    return () => { delete el.dataset.kids; };
+  }, [kids]);
   const isCurrent = (href: string) => (href === "/student" ? pathname === href : pathname.startsWith(href));
   const focus = !parent && settings.focusMode && pathname.startsWith("/student/lesson/");
   if (wrongArea) return <div role="status" className="grid min-h-screen flex-1 place-items-center text-lg font-semibold text-brand-deep">Loading...</div>;
@@ -65,7 +73,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-[radial-gradient(60%_50%_at_85%_0%,#ece8fb_0%,transparent_70%),radial-gradient(40%_40%_at_0%_10%,#fff1e6_0%,transparent_70%)]">
+    <div className="kids-bg flex flex-1 flex-col bg-[radial-gradient(60%_50%_at_85%_0%,#ece8fb_0%,transparent_70%),radial-gradient(40%_40%_at_0%_10%,#fff1e6_0%,transparent_70%)]">
       <Navbar />
       <div className="flex flex-1 flex-col md:flex-row">
         <aside className="hidden shrink-0 md:sticky md:top-[5.75rem] md:flex md:h-[calc(100vh-5.75rem)] md:w-20 md:flex-col lg:w-64">
