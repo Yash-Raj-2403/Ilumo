@@ -11,15 +11,21 @@ declare global {
 function connect(): Promise<MongoClient> {
   const uri = process.env.MONGODB_URI;
   if (!uri) throw new Error("MONGODB_URI is not set.");
-  const client = new MongoClient(uri);
-  return client.connect();
+  return new MongoClient(uri).connect();
 }
-
-const clientPromise: Promise<MongoClient> = global._mongoClientPromise ?? (global._mongoClientPromise = connect());
 
 /** The database named in the connection string (falls back to "ilumo"). */
 export async function getDb(): Promise<Db> {
-  const client = await clientPromise;
+  if (!global._mongoClientPromise) {
+    global._mongoClientPromise = connect().catch((err) => {
+      // Don't leave a rejected promise cached: a transient failure (e.g. Atlas network access
+      // not yet applied) would otherwise poison every request this warm instance ever handles
+      // again. Clearing it lets the next call retry instead.
+      global._mongoClientPromise = undefined;
+      throw err;
+    });
+  }
+  const client = await global._mongoClientPromise;
   return client.db(process.env.MONGODB_DB || undefined) ?? client.db("ilumo");
 }
 
