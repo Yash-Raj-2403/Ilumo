@@ -6,7 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { fmtDate, type ChildLesson, type ChildSummary } from "./child-types";
 import { ProgressBar } from "@/components/student/lesson-card";
 import { CATEGORIES } from "@/lib/categories";
-import { authedFetch } from "@/lib/supabase/authed-fetch";
+import { authedFetch } from "@/lib/session/authed-fetch";
 
 export function ChildDetail({ id }: { id: string }) {
   const [data, setData] = useState<{ child: ChildSummary; lessons: ChildLesson[] } | null | "error">(null);

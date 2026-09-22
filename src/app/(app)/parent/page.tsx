@@ -8,7 +8,7 @@ import { fmtDate, type ChildSummary } from "@/components/parent/child-types";
 import { ProgressBar } from "@/components/student/lesson-card";
 import { useStudent } from "@/components/student/student-provider";
 import { CATEGORIES } from "@/lib/categories";
-import { authedFetch } from "@/lib/supabase/authed-fetch";
+import { authedFetch } from "@/lib/session/authed-fetch";
 
 export default function ParentDashboard() {
   const { user } = useStudent();

@@ -8,9 +8,9 @@ import { SupportPicker } from "@/components/auth/auth-steps";
 import { useStudent } from "@/components/student/student-provider";
 import { CATEGORIES } from "@/lib/categories";
 import { validateEmail, validateName, validateNewPassword, type Need } from "@/lib/auth-shared";
-import { authedFetch } from "@/lib/supabase/authed-fetch";
-import { supabase } from "@/lib/supabase/client";
-import { updateChild, updateName } from "@/lib/supabase/data";
+import { authedFetch } from "@/lib/session/authed-fetch";
+import { auth } from "@/lib/session/client";
+import { updateChild, updateName } from "@/lib/session/data";
 
 type Status = { kind: "ok" | "error"; text: string } | null;
 
@@ -68,8 +68,10 @@ function ProfileSection() {
         const res = await authedFetch("/api/auth/email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || "We couldn't change your email right now.");
-        await supabase.auth.refreshSession();
-        updateUser({ email: email.trim().toLowerCase() });
+        const next = email.trim().toLowerCase();
+        if (data.token) auth.refreshToken(data.token);
+        auth.updateCachedUser({ email: next });
+        updateUser({ email: next });
       }
       setStatus({ kind: "ok", text: "Your details are saved." });
     } catch (err) {
@@ -167,7 +169,6 @@ function ExploreSection() {
 }
 
 function PasswordSection() {
-  const { user } = useStudent();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [errors, setErrors] = useState<{ current?: string; next?: string }>({});
@@ -185,13 +186,17 @@ function PasswordSection() {
     if (errs.current || errs.next) return;
     setBusy(true);
     try {
-      const check = await supabase.auth.signInWithPassword({ email: user.email, password: current });
-      if (check.error) {
-        setErrors({ current: "That isn't your current password." });
+      const res = await authedFetch("/api/auth/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ current, next }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 401) setErrors({ current: "That isn't your current password." });
+        else setStatus({ kind: "error", text: data.error ?? "We couldn't change your password. Please try again." });
         return;
       }
-      const { error } = await supabase.auth.updateUser({ password: next });
-      if (error) throw error;
       setCurrent("");
       setNext("");
       setStatus({ kind: "ok", text: "Your password is changed." });

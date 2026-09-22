@@ -5,7 +5,7 @@ import { Check, Eye, EyeOff } from "lucide-react";
 import { Field } from "@/components/auth/auth-ui";
 import { SupportPicker } from "@/components/auth/auth-steps";
 import { validateEmail, validateName, validateNewPassword, type Need } from "@/lib/auth-shared";
-import { authedFetch } from "@/lib/supabase/authed-fetch";
+import { authedFetch } from "@/lib/session/authed-fetch";
 import type { ChildSummary } from "./child-types";
 
 type Errors = { name?: string; email?: string; age?: string; password?: string; supports?: string };

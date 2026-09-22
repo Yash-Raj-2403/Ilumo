@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Volume2, X } from "lucide-react";
 import type { Lesson, QuizFeedback } from "@/lib/lesson-types";
-import { authedFetch } from "@/lib/supabase/authed-fetch";
+import { authedFetch } from "@/lib/session/authed-fetch";
 import { mockFeedback } from "@/lib/server/mock";
 import { useStudent } from "./student-provider";
 

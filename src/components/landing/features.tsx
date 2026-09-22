@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Accessibility, ArrowRight, BookOpen, Ear, Eye, MessageCircle, Puzzle, type LucideIcon } from "lucide-react";
 import { CATEGORIES, categoryHref, type CategorySlug } from "@/lib/categories";
-import { useMySupports } from "@/lib/supabase/use-supports";
+import { useMySupports } from "@/lib/session/use-supports";
 
 const ICONS: Record<CategorySlug, LucideIcon> = {
   autism: Puzzle,

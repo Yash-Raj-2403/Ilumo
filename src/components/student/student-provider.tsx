@@ -3,8 +3,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Child, Role } from "@/lib/auth-shared";
-import { supabase } from "@/lib/supabase/client";
-import * as db from "@/lib/supabase/data";
+import { auth } from "@/lib/session/client";
+import * as db from "@/lib/session/data";
 import { DEMO_STUDENT, type Lesson, type QuizFeedback, type StudentProfile } from "@/lib/lesson-types";
 import { ALL_SLUGS, normalizeSupports } from "@/lib/auth-shared";
 import type { CategorySlug } from "@/lib/categories";
@@ -149,7 +149,7 @@ export function StudentProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data } = await supabase.auth.getSession();
+      const { data } = await auth.getSession();
       const session = data.session;
       if (!session) {
         const back = window.location.pathname + window.location.search;
@@ -162,9 +162,9 @@ export function StudentProvider({ children }: { children: React.ReactNode }) {
         const me: AuthUser = {
           id: u.id,
           email: u.email ?? profile?.email ?? "",
-          name: profile?.name ?? (u.user_metadata?.name as string) ?? "Learner",
-          role: profile?.role ?? "student",
-          child: profile?.child ?? null,
+          name: profile?.name ?? u.name ?? "Learner",
+          role: profile?.role ?? u.role ?? "student",
+          child: profile?.child ?? (u.child as Child | null) ?? null,
         };
         const base = defaultsFor(toStudent(me));
         const saved = profile?.settings && typeof profile.settings === "object" ? (profile.settings as Partial<Settings>) : {};
@@ -192,13 +192,13 @@ export function StudentProvider({ children }: { children: React.ReactNode }) {
       } catch (e) {
         if (cancelled) return;
         // Signed in but the tables aren't reachable: keep the app usable for this session.
-        setUser({ id: u.id, email: u.email ?? "", name: (u.user_metadata?.name as string) ?? "Learner", role: (u.user_metadata?.role as Role) ?? "student", child: null });
+        setUser({ id: u.id, email: u.email ?? "", name: u.name ?? "Learner", role: (u.role as Role) ?? "student", child: null });
         reportDb(e);
       }
       setSpeechAvailable(speechSupported());
       setReady(true);
     })();
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+    const { data: sub } = auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT") router.replace("/");
     });
     return () => {
@@ -222,7 +222,7 @@ export function StudentProvider({ children }: { children: React.ReactNode }) {
   const updateUser = useCallback((patch: Partial<AuthUser>) => setUser((u) => (u ? { ...u, ...patch } : u)), []);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    await auth.signOut();
     router.push("/");
   }, [router]);
 

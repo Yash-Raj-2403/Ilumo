@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FileText, Image as ImageIcon, UploadCloud } from "lucide-react";
 import type { Lesson } from "@/lib/lesson-types";
 import { CATEGORIES, type CategorySlug } from "@/lib/categories";
-import { authedFetch } from "@/lib/supabase/authed-fetch";
+import { authedFetch } from "@/lib/session/authed-fetch";
 import { useStudent } from "./student-provider";
 import { ProcessingState } from "./processing-state";
 

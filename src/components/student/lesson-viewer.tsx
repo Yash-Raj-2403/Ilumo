@@ -6,7 +6,7 @@ import { Eye, Focus, Layers, Volume2 } from "lucide-react";
 import type { Lesson, QuizFeedback } from "@/lib/lesson-types";
 import { CATEGORIES } from "@/lib/categories";
 import { findTopic } from "@/data/explore";
-import { authedFetch } from "@/lib/supabase/authed-fetch";
+import { authedFetch } from "@/lib/session/authed-fetch";
 import { ReadAloudControls } from "./accessibility-controls";
 import { FlashcardQuiz } from "./flashcard-quiz";
 import { Flashcards } from "./flashcards";

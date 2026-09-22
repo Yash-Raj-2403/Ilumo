@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Bell, Download, FileVideo } from "lucide-react";
 import sample from "@/data/sampleCaptions.json";
 import { activeIndex, clock, sanitizeSegments, toSRT, toTranscript, toVTT, type CaptionedMedia as Media, type Segment } from "@/lib/captions";
-import { authedFetch } from "@/lib/supabase/authed-fetch";
+import { authedFetch } from "@/lib/session/authed-fetch";
 import { CaptionStyleControls, useCaptionClasses } from "./caption-style";
 import { useNotify } from "./visual-alerts";
 

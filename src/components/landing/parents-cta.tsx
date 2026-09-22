@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, LogOut } from "lucide-react";
-import { useAuthSession } from "@/lib/supabase/use-session";
-import { useMyProfile } from "@/lib/supabase/use-supports";
+import { useAuthSession } from "@/lib/session/use-session";
+import { useMyProfile } from "@/lib/session/use-supports";
 
 const primary = "inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-brand-deep px-8 text-lg font-semibold text-white hover:bg-[#1a1450]";
 const secondary = "inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-white px-8 text-lg font-semibold text-brand-deep ring-2 ring-brand-deep/60 hover:bg-brand-soft";

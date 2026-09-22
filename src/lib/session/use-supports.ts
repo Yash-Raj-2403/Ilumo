@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { normalizeSupports, type Role } from "@/lib/auth-shared";
 import type { CategorySlug } from "@/lib/categories";
-import { supabase } from "./client";
+import { sessionStore } from "./client";
 import { loadProfile } from "./data";
 
 type Mine = { role: Role | null; supports: CategorySlug[] | null };
@@ -30,11 +30,11 @@ export function useMyProfile(): Mine {
         if (alive) setMine({ role: null, supports: null });
       }
     };
-    supabase.auth.getSession().then(({ data }) => load(data.session?.user.id));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => load(session?.user.id));
+    load(sessionStore.get()?.user.id);
+    const unsubscribe = sessionStore.subscribe((s) => load(s?.user.id));
     return () => {
       alive = false;
-      sub.subscription.unsubscribe();
+      unsubscribe();
     };
   }, []);
 

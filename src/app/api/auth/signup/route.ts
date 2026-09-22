@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { randomUUID } from "crypto";
+import { users } from "@/lib/mongo/collections";
 import { clientIp, rateLimited } from "@/lib/server/auth";
+import { hashPassword } from "@/lib/server/password";
+import { signToken } from "@/lib/server/jwt";
 import { normalizeSupports, validateEmail, validateName, validateNewPassword } from "@/lib/auth-shared";
 
-// Creates the account server-side so the profile row and the login are created together.
-// The email is marked confirmed so the demo doesn't depend on email delivery.
+// Creates the account and signs the person in immediately, so the client doesn't need a
+// separate login call. The email is trusted (no verification link) so the demo doesn't
+// depend on email delivery.
 export async function POST(request: Request) {
   if (rateLimited(`signup:${clientIp(request)}`, 8)) {
     return NextResponse.json({ error: "Too many tries. Please wait a moment." }, { status: 429 });
@@ -21,32 +25,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Some details look wrong. Please go back and check them." }, { status: 400 });
   }
 
-  const admin = supabaseAdmin();
-  const { data, error } = await admin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: { name, role },
-  });
-  if (error || !data.user) {
-    const taken = /already|registered|exists/i.test(error?.message ?? "");
-    if (!taken) console.error("[ilumo] createUser failed:", error?.message);
-    return NextResponse.json(
-      { error: taken ? "That email already has an ILUMO account." : "We couldn't create your account right now." },
-      { status: taken ? 409 : 502 },
-    );
+  const col = await users();
+  if (await col.findOne({ email }, { projection: { _id: 1 } })) {
+    return NextResponse.json({ error: "That email already has an ILUMO account." }, { status: 409 });
   }
 
-  const { error: profileError } = await admin
-    .from("profiles")
-    .insert({ id: data.user.id, email, name, role, child: null, settings: { supports } });
-  if (profileError) {
-    console.error("[ilumo] profile insert failed:", profileError.message);
-    await admin.auth.admin.deleteUser(data.user.id); // don't leave a half-made account behind
-    return NextResponse.json(
-      { error: "The database isn't set up yet. Please try again shortly.", code: "db_unavailable" },
-      { status: 503 },
-    );
+  const id = randomUUID();
+  const passwordHash = await hashPassword(password);
+  try {
+    await col.insertOne({
+      _id: id, email, passwordHash, name, role,
+      child: null, settings: { supports }, childIds: [], parentId: null,
+      createdAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    // Unique index race: someone else signed up with this email a moment ago.
+    if (err instanceof Error && /E11000/.test(err.message)) {
+      return NextResponse.json({ error: "That email already has an ILUMO account." }, { status: 409 });
+    }
+    console.error("[ilumo] signup failed:", err);
+    return NextResponse.json({ error: "We couldn't create your account right now.", code: "db_unavailable" }, { status: 503 });
   }
-  return NextResponse.json({ ok: true });
+
+  const token = await signToken({ sub: id, email, role });
+  return NextResponse.json({ ok: true, token, user: { id, email, name, role, child: null } });
 }

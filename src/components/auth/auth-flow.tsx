@@ -8,8 +8,8 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowLeft } from "lucide-react";
 import { Logo } from "@/components/landing/logo";
 import { normalizeSupports, safeNext, validateEmail, validateLoginPassword, validateName, validateNewPassword, type Need, type Role } from "@/lib/auth-shared";
-import { supabase } from "@/lib/supabase/client";
-import { loadProfile, saveSettings } from "@/lib/supabase/data";
+import { auth } from "@/lib/session/client";
+import { loadProfile, saveSettings } from "@/lib/session/data";
 import { LOGO_COLORS } from "./auth-ui";
 import {
   CompleteStep, EmailStep, ExistsStep, NameStep, PasswordStep, RoleStep, SurveyStep,
@@ -74,7 +74,7 @@ export function AuthFlow({ mode }: { mode: Mode }) {
 
   const isFinal = (s: StepId) => steps[steps.indexOf(s) + 1] === "complete";
 
-  /** Signup: create the account on the server, then sign in with the same password. */
+  /** Signup: the server creates the account and hands back a session in the same response. */
   async function createAccount() {
     setLoading(true);
     setFormError(null);
@@ -90,11 +90,7 @@ export function AuthFlow({ mode }: { mode: Mode }) {
         if (res.status === 409) setTaken(true);
         return;
       }
-      const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
-      if (error) {
-        setFormError("Your account was created, but we couldn't log you in. Please try logging in.");
-        return;
-      }
+      auth.setSession({ token: data.token, user: data.user });
       setPassword("");
       go(1);
     } catch {
@@ -108,7 +104,7 @@ export function AuthFlow({ mode }: { mode: Mode }) {
   async function signIn() {
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
+      const { data, error } = await auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
       if (error || !data.user) {
         const network = error && /fetch|network/i.test(error.message);
         return fail({ password: network ? "We couldn't connect. Check your internet and try again." : "That email and password don't match." });
@@ -141,7 +137,7 @@ export function AuthFlow({ mode }: { mode: Mode }) {
     setLoading(true);
     setFormError(null);
     try {
-      const { data } = await supabase.auth.getUser();
+      const { data } = await auth.getUser();
       if (data.user) await mergeSupports(data.user.id, supports);
       go(1);
     } catch {
@@ -213,7 +209,7 @@ export function AuthFlow({ mode }: { mode: Mode }) {
   // arrival only, so it can't cut the completion screen short after signing up.
   const router = useRouter();
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
+    auth.getSession().then(async ({ data }) => {
       if (!data.session) return;
       const p = await loadProfile(data.session.user.id).catch(() => null);
       router.replace(p?.role === "parent" ? "/parent" : (next ?? "/student"));

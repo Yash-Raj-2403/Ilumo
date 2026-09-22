@@ -5,7 +5,7 @@ import { Eye, RotateCw, Square, Volume2 } from "lucide-react";
 import type { Lesson } from "@/lib/lesson-types";
 import { pieces, syllables, TEAMS } from "@/lib/syllables";
 import { speakText, stopSpeech } from "@/lib/speech";
-import { authedFetch } from "@/lib/supabase/authed-fetch";
+import { authedFetch } from "@/lib/session/authed-fetch";
 import { FlipCard } from "../flashcards";
 import { LessonPicker } from "./lesson-picker";
 import { useStudent } from "../student-provider";

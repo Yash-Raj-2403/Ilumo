@@ -5,7 +5,7 @@ import { BookOpen, ExternalLink, Send } from "lucide-react";
 import sampleLesson from "@/data/mockPhotosynthesisLesson.json";
 import type { LessonContent } from "@/lib/lesson-types";
 import { lessonsFor } from "@/lib/categories";
-import { authedFetch } from "@/lib/supabase/authed-fetch";
+import { authedFetch } from "@/lib/session/authed-fetch";
 import { findBestBlock } from "@/lib/voice/commands";
 import { useStudent } from "../student-provider";
 import { useNotify } from "./visual-alerts";

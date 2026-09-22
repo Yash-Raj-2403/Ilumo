@@ -1,4 +1,4 @@
-import { authedFetch } from "@/lib/supabase/authed-fetch";
+import { authedFetch } from "@/lib/session/authed-fetch";
 
 /** Ask the AI to describe a picture (a File, or a data: address such as an uploaded lesson image). */
 export async function describeImage(source: File | Blob | string): Promise<{ title: string; description: string }> {

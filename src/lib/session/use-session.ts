@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { supabase } from "./client";
+import { auth, sessionStore } from "./client";
 
 /** Whether someone is signed in (null until we know), and a sign-out helper. */
 export function useAuthSession() {
@@ -9,14 +9,14 @@ export function useAuthSession() {
 
   useEffect(() => {
     let alive = true;
-    supabase.auth.getSession().then(({ data }) => alive && setSignedIn(!!data.session));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => setSignedIn(!!session));
+    Promise.resolve().then(() => alive && setSignedIn(!!sessionStore.get()));
+    const unsubscribe = sessionStore.subscribe((s) => setSignedIn(!!s));
     return () => {
       alive = false;
-      sub.subscription.unsubscribe();
+      unsubscribe();
     };
   }, []);
 
-  const signOut = useCallback(() => supabase.auth.signOut(), []);
+  const signOut = useCallback(() => auth.signOut(), []);
   return { signedIn, signOut };
 }

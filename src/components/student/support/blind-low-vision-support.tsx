@@ -8,7 +8,7 @@ import sampleLesson from "@/data/mockPhotosynthesisLesson.json";
 import type { Lesson, LessonContent } from "@/lib/lesson-types";
 import { lessonsFor } from "@/lib/categories";
 import { DEFAULT_LAYOUT, paginate, toBRF, toBraille } from "@/lib/braille";
-import { authedFetch } from "@/lib/supabase/authed-fetch";
+import { authedFetch } from "@/lib/session/authed-fetch";
 import { findBestBlock, parseCommand, rateWords, stepRate } from "@/lib/voice/commands";
 import { VoiceBar, useVoiceMode, type Voice } from "./voice-mode";
 import { useStudent, type ReadItem } from "../student-provider";

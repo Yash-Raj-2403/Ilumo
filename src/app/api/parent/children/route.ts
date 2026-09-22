@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { randomUUID } from "crypto";
+import { users } from "@/lib/mongo/collections";
 import { rateLimited, requireParent } from "@/lib/server/auth";
+import { hashPassword } from "@/lib/server/password";
 import { childIdsOf, childSummary, isMyChild } from "@/lib/server/children";
 import { normalizeSupports, validateEmail, validateName, validateNewPassword } from "@/lib/auth-shared";
 
@@ -33,36 +35,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Some details look wrong. Please check them and try again." }, { status: 400 });
   }
 
-  const admin = supabaseAdmin();
-  const { data: created, error } = await admin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: { name, role: "student" },
-    app_metadata: { parent_id: parent.user.id }, // only the server can set this
-  });
-  if (error || !created.user) {
-    const taken = /already|registered|exists/i.test(error?.message ?? "");
-    if (!taken) console.error("[ilumo] child createUser failed:", error?.message);
-    return NextResponse.json({ error: taken ? "That email already has an ILUMO account." : "We couldn't create the account right now." }, { status: taken ? 409 : 502 });
+  const col = await users();
+  if (await col.findOne({ email }, { projection: { _id: 1 } })) {
+    return NextResponse.json({ error: "That email already has an ILUMO account." }, { status: 409 });
   }
 
-  const childId = created.user.id;
-  const { error: profileError } = await admin.from("profiles").insert({
-    id: childId, email, name, role: "student", child: { name, age, needs: supports }, settings: { supports },
-  });
-  if (profileError) {
-    console.error("[ilumo] child profile insert failed:", profileError.message);
-    await admin.auth.admin.deleteUser(childId);
-    return NextResponse.json({ error: "The database isn't set up yet. Please try again shortly." }, { status: 503 });
+  const childId = randomUUID();
+  const passwordHash = await hashPassword(password);
+  try {
+    await col.insertOne({
+      _id: childId, email, passwordHash, name, role: "student",
+      child: { name, age, needs: supports }, settings: { supports },
+      childIds: [], parentId: parent.user.id,
+      createdAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    if (err instanceof Error && /E11000/.test(err.message)) {
+      return NextResponse.json({ error: "That email already has an ILUMO account." }, { status: 409 });
+    }
+    console.error("[ilumo] child account creation failed:", err);
+    return NextResponse.json({ error: "We couldn't create the account right now." }, { status: 503 });
   }
 
   const ids = [...new Set([...childIdsOf(parent.user), childId])];
-  const { error: linkError } = await admin.auth.admin.updateUserById(parent.user.id, {
-    app_metadata: { ...parent.user.app_metadata, child_ids: ids },
-  });
-  if (linkError) {
-    await admin.auth.admin.deleteUser(childId); // profile row is removed with it (cascade)
+  const { matchedCount } = await col.updateOne({ _id: parent.user.id }, { $set: { childIds: ids } });
+  if (matchedCount === 0) {
+    await col.deleteOne({ _id: childId });
     return NextResponse.json({ error: "We couldn't link the account to yours. Please try again." }, { status: 502 });
   }
   return NextResponse.json({ child: await childSummary(childId) }, { status: 201 });

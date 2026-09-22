@@ -4,8 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useReducedMotion } from "motion/react";
 import { ArrowRight, Brain, Eye, GraduationCap, Heart, LayoutDashboard, Mic, Sparkles, Users, Volume2 } from "lucide-react";
-import { useAuthSession } from "@/lib/supabase/use-session";
-import { useMyProfile } from "@/lib/supabase/use-supports";
+import { useAuthSession } from "@/lib/session/use-session";
+import { useMyProfile } from "@/lib/session/use-supports";
 import { CardBody, CardContainer, CardItem } from "@/components/ui/3d-card";
 import { SquigglyText } from "@/components/ui/squiggly-text";
 

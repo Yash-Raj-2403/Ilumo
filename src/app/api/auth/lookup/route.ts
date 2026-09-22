@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { users } from "@/lib/mongo/collections";
 import { clientIp, rateLimited } from "@/lib/server/auth";
 import { validateEmail } from "@/lib/auth-shared";
 
@@ -13,14 +13,11 @@ export async function POST(request: Request) {
   if (typeof email !== "string" || validateEmail(email)) {
     return NextResponse.json({ error: "Please enter a valid email." }, { status: 400 });
   }
-  const { data, error } = await supabaseAdmin()
-    .from("profiles")
-    .select("name")
-    .eq("email", email.trim().toLowerCase())
-    .maybeSingle();
-  if (error) {
-    console.error("[ilumo] lookup failed:", error.message);
+  try {
+    const data = await (await users()).findOne({ email: email.trim().toLowerCase() }, { projection: { name: 1 } });
+    return NextResponse.json({ exists: !!data, name: data?.name?.split(" ")[0] ?? null });
+  } catch (err) {
+    console.error("[ilumo] lookup failed:", err);
     return NextResponse.json({ error: "The database isn't set up yet.", code: "db_unavailable" }, { status: 503 });
   }
-  return NextResponse.json({ exists: !!data, name: data?.name?.split(" ")[0] ?? null });
 }
