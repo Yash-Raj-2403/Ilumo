@@ -38,9 +38,10 @@ export function AuthFlow({ mode }: { mode: Mode }) {
   const query = useSearchParams();
   const next = safeNext(query.get("next"));
   const roleParam = query.get("role");
+  const emailParam = query.get("email");
   const [idx, setIdx] = useState(0);
   const [dir, setDir] = useState(1);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(emailParam ?? "");
   const [name, setName] = useState("");
   const [role, setRole] = useState<Role | null>(roleParam === "parent" || roleParam === "student" ? roleParam : null);
   const [password, setPassword] = useState(""); // memory only, wiped on completion

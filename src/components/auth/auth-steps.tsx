@@ -105,7 +105,7 @@ export function ExistsStep(props: { name?: string; email: string; onSubmit: (e: 
         <PrimaryButton type="submit" data-autofocus>Continue</PrimaryButton>
       ) : (
         <div className="flex flex-wrap gap-3">
-          <Link href="/signup" data-autofocus className="inline-flex min-h-14 items-center rounded-full bg-brand px-8 text-lg font-semibold text-white shadow-[0_12px_28px_rgba(91,77,245,0.35)]">
+          <Link href={`/signup?email=${encodeURIComponent(props.email)}`} data-autofocus className="inline-flex min-h-14 items-center rounded-full bg-brand px-8 text-lg font-semibold text-white shadow-[0_12px_28px_rgba(91,77,245,0.35)]">
             Create an account
           </Link>
           <button type="button" onClick={props.onBack} className="min-h-14 rounded-full border-2 border-brand-deep/20 bg-white px-8 text-lg font-semibold text-brand-deep hover:bg-brand-soft">
