@@ -100,7 +100,7 @@ function defaultSettings(p: StudentProfile): Settings {
     describeImages: p.accessibilityProfile.imageDescriptions,
     keyboardHints: p.accessibilityProfile.keyboardNavigation,
     supports: null,
-    explore: false,
+    explore: true,
     gameStars: {},
     gameStreak: { last: "", count: 0, done: [] },
     speechRate: 1,
